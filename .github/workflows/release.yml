@@ -7,8 +7,11 @@
 #   - Every file: a detached GPG signature (FREECELL_GPG_KEY), plus a signed
 #     SHA256SUMS and latest.json, the in-app update checker's feed.
 # Then it tags the release v<version> and creates a GitHub Release with all of it.
-# Windows and macOS are best effort: if they didn't build or can't be signed, the
-# release goes out without them.
+#   - Android: the APK is signed with the app key (FREECELL_APK_KEYSTORE), attached to
+#     the release and added to the F-Droid repository on GitHub Pages
+#     (FREECELL_FDROID_KEYSTORE; scripts/ci/fdroid-repo.sh).
+# Windows, macOS and Android are best effort: if they didn't build or can't be
+# signed, the release goes out without them.
 #
 # Merge staging -> main pull requests with "Create a merge commit": the PR's head is
 # then the merge commit's second parent, which is what this looks up.
@@ -51,6 +54,7 @@ jobs:
       dry_run: ${{ steps.build.outputs.dry_run }}
       macos: ${{ steps.build.outputs.macos }}
       windows: ${{ steps.build.outputs.windows }}
+      android: ${{ steps.build.outputs.android }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -97,7 +101,7 @@ jobs:
             echo "::error::build $run: linux-appimage is '$(conclusion linux-appimage)'"
             exit 1
           }
-          for job in macos windows; do
+          for job in macos windows android; do
             if [ "$(conclusion "$job")" = success ]; then
               echo "$job=true" >> "$GITHUB_OUTPUT"
             else
@@ -183,6 +187,9 @@ jobs:
         env:
           MACOS: ${{ needs.sign-macos.result }}
           WINDOWS: ${{ needs.sign-windows.result }}
+          ANDROID: ${{ needs.prepare.outputs.android }}
+          APK_KEYSTORE: ${{ secrets.FREECELL_APK_KEYSTORE }}
+          APK_KEYSTORE_PASS: ${{ secrets.FREECELL_APK_KEYSTORE_PASS }}
         run: |
           set -euo pipefail
           gh run download "${{ needs.prepare.outputs.run }}" -R "$GITHUB_REPOSITORY" -n freecell-linux -D dist
@@ -194,6 +201,24 @@ jobs:
               echo "::warning::$platform is '${!result}'; releasing without it"
             fi
           done
+          # The APK ships only signed, and always with the same key: Android refuses an
+          # update signed by another one.
+          if [ "$ANDROID" != true ]; then
+            echo "::warning::android was not built; releasing without it"
+          elif [ -z "$APK_KEYSTORE" ]; then
+            echo "::warning::FREECELL_APK_KEYSTORE is not set; releasing without the APK"
+          else
+            gh run download "${{ needs.prepare.outputs.run }}" -R "$GITHUB_REPOSITORY" -n freecell-android -D android
+            unsigned=$(find android -name '*.apk' | head -n 1)
+            tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+            printf '%s' "$APK_KEYSTORE" | base64 -d > "$RUNNER_TEMP/apk.p12"
+            apk="dist/FreeCell-$VERSION-arm64-v8a.apk"
+            "$tools/zipalign" -p -f 4 "$unsigned" "$RUNNER_TEMP/aligned.apk"
+            "$tools/apksigner" sign --ks "$RUNNER_TEMP/apk.p12" --ks-type PKCS12 \
+              --ks-pass env:APK_KEYSTORE_PASS --out "$apk" "$RUNNER_TEMP/aligned.apk"
+            "$tools/apksigner" verify "$apk"
+            rm -f "$RUNNER_TEMP/apk.p12" "$apk.idsig"
+          fi
           ls -la dist
 
       - name: Sign
@@ -223,3 +248,24 @@ jobs:
           set -euo pipefail
           gh release create "v$VERSION" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "FreeCell $VERSION" --generate-notes dist/*
+
+      # The self-hosted F-Droid repository on GitHub Pages (gh-pages branch, /fdroid).
+      - name: F-Droid repository
+        if: needs.prepare.outputs.dry_run == 'false'
+        env:
+          FREECELL_FDROID_KEYSTORE: ${{ secrets.FREECELL_FDROID_KEYSTORE }}
+          FREECELL_FDROID_KEYSTORE_PASS: ${{ secrets.FREECELL_FDROID_KEYSTORE_PASS }}
+        run: |
+          set -euo pipefail
+          apk="dist/FreeCell-$VERSION-arm64-v8a.apk"
+          if [ ! -f "$apk" ]; then
+            echo "::warning::no signed APK; the F-Droid repository was not updated"
+            exit 0
+          fi
+          if [ -z "$FREECELL_FDROID_KEYSTORE" ]; then
+            echo "::warning::FREECELL_FDROID_KEYSTORE is not set; the F-Droid repository was not updated"
+            exit 0
+          fi
+          # Ubuntu's fdroidserver (2.2) can't read current APKs.
+          pipx install fdroidserver==2.4.5
+          scripts/ci/fdroid-repo.sh "$apk"
