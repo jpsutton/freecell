@@ -107,5 +107,6 @@
   </qresource>
   <qresource prefix="/art">
     <file alias="king.svg">king-spades-crop.svg</file>
+    <file alias="icon.png">../packaging/icons/freecell-256.png</file>
   </qresource>
 </RCC>

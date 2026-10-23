@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=FreeCell
+Comment=The Windows XP FreeCell card game
+Exec=freecell
+Icon=io.github.jpsutton.freecell
+Categories=Game;CardGame;
+Terminal=false

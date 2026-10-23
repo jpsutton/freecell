@@ -38,7 +38,80 @@ The XP win animation:
 
 ![Win animation with bouncing card trails](docs/screenshots/win.png)
 
-## Building and running
+## Installing
+
+Download FreeCell from the [Releases page](https://github.com/jpsutton/freecell/releases/latest):
+
+| Platform | Download |
+| --- | --- |
+| Linux | `FreeCell-<version>-x86_64.AppImage`. Needs glibc 2.39 or newer (Ubuntu 24.04, Debian 13, Fedora 40 or newer, Arch). |
+| Windows | `FreeCell-<version>-windows-x64.zip` (Windows 10 or 11, 64-bit) |
+| macOS | `FreeCell-<version>-macos-arm64.dmg` (Apple silicon, macOS 13 or newer) |
+
+The Windows and macOS builds are best effort. They are signed with FreeCell's
+own certificate, not one bought from Microsoft or Apple, so both systems warn
+you the first time you open them.
+
+### macOS
+
+The easiest way to install or update is the install script. It downloads the
+latest release, checks it against the release's `SHA256SUMS` and FreeCell's
+signing certificate, and copies FreeCell into `/Applications`:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/jpsutton/freecell/main/scripts/install-macos.sh | bash
+```
+
+Files downloaded with `curl` aren't quarantined, so FreeCell opens without a
+Gatekeeper prompt. Run the same command again to update.
+
+If you download the `.dmg` in a browser instead, macOS says Apple could not
+verify that FreeCell is free of malware. After the first attempt to open it, go
+to **System Settings › Privacy & Security** and click **Open Anyway**. Or clear
+the quarantine from a terminal:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/FreeCell.app
+```
+
+### Windows
+
+Unzip the folder anywhere and run `FreeCell.exe`. If SmartScreen says "Windows
+protected your PC", click **More info**, then **Run anyway**.
+
+### Linux
+
+Make the AppImage executable and run it:
+
+```bash
+chmod +x FreeCell-*-x86_64.AppImage
+```
+
+```bash
+./FreeCell-*-x86_64.AppImage
+```
+
+### Checking a download
+
+Every release file comes with a GPG signature, and the release includes a
+signed `SHA256SUMS`. The release key is
+[`packaging/freecell-signing-key.asc`](packaging/freecell-signing-key.asc),
+fingerprint `CE91 35AD 625D FAF3 378D  4159 20A7 4E15 59D0 94FA`.
+
+```bash
+gpg --import freecell-signing-key.asc
+```
+
+```bash
+gpg --verify SHA256SUMS.sig SHA256SUMS && sha256sum --check --ignore-missing SHA256SUMS
+```
+
+The macOS app and `FreeCell.exe` are also code-signed with
+[`packaging/freecell-codesign.crt`](packaging/freecell-codesign.crt), a
+self-signed certificate for "FreeCell (jpsutton)" with SHA-256 fingerprint
+`FA:94:62:BA:7E:F9:EE:D6:6A:D5:92:C5:13:29:F3:30:0E:F1:40:CF:B5:6E:CD:5C:92:C0:1C:09:90:99:8C:47`.
+
+## Building from source
 
 Requirements: CMake 3.16 or later, a C++17 compiler, and Qt 6 with the
 `Widgets` and `Svg` modules.
@@ -166,6 +239,10 @@ match yet.
 | `assets/king-spades-crop.svg` | The king between the free cells and the foundations, bundled as `:/art/king.svg`. |
 | `assets/cards/` | Source SVGs for the court card art (the full upstream deck). Not bundled. |
 | `tools/make_card_faces.py` | Generator for the SVG faces. |
+| `tools/make_icons.py` | Generator for the app icon in `packaging/` (from the king of spades face). |
+| `packaging/` | Desktop entry, Info.plist, icons, and the public signing key and certificate. |
+| `scripts/install-macos.sh` | The macOS install script. |
+| `scripts/ci/` | Packaging and signing scripts for the workflows in `.github/workflows/`. |
 | `docs/screenshots/` | The screenshots in this README. |
 
 ### Model details
@@ -243,6 +320,38 @@ Session statistics live in memory only.
 - Taking a card back off a foundation: it is allowed to a free cell but not to
   another foundation, auto-play does not send it straight back, replaying the
   move history reproduces the position, and undo puts the card back.
+
+## Development and releases
+
+Changes go through two branches:
+
+1. Each fix or feature gets its own branch, cut from `staging`, and a pull
+   request into `staging`. The `checks` workflow runs on it: shellcheck,
+   actionlint, the desktop entry, and a Linux build with the logic tests.
+2. When `staging` holds what the next release should have, bump the version in
+   `CMakeLists.txt` (`project(freecell VERSION x.y.z ...)`) and open one pull
+   request from `staging` into `main`. Besides the checks, it runs the `build`
+   workflow, which builds the AppImage, the Windows zip and the macOS app. The
+   AppImage must build; Windows and macOS are best effort.
+3. Merge it with **Create a merge commit**. The `release` workflow then takes
+   that pull request's build without rebuilding, signs it, tags `v<version>`
+   and publishes the GitHub Release.
+
+The release workflow signs with three repository secrets:
+
+| Secret | What it is |
+| --- | --- |
+| `FREECELL_GPG_KEY` | The armored GPG private key (no passphrase) that signs every file and `SHA256SUMS` |
+| `FREECELL_CODESIGN_P12` | The code-signing certificate and its key, as a base64 PKCS#12 file. Signs the macOS app (`codesign`) and `FreeCell.exe` (Authenticode, with `osslsigncode`). |
+| `FREECELL_CODESIGN_PASSWORD` | The PKCS#12 file's password |
+
+The public halves are in `packaging/`. Keep the private keys: a new code-signing
+certificate would change the macOS app's identity, so the install script and
+installed copies would refuse updates signed with it.
+
+`release.yml` also has a manual dry run (Actions › release › Run workflow). It
+signs the newest build of the chosen branch and uploads the result as an
+artifact, without tagging or releasing.
 
 ## Card art
 

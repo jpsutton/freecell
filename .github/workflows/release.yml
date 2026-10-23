@@ -1,0 +1,225 @@
+# Publish on merge into main, without rebuilding: the pull request from staging
+# already ran the full build (build.yml), so this takes that run's artifacts and
+# signs them:
+#   - macOS: FreeCell.app is code-signed with the release certificate
+#     (FREECELL_CODESIGN_P12), then packed as a .dmg and as the updater's tarball.
+#   - Windows: FreeCell.exe is Authenticode-signed with the same certificate.
+#   - Every file: a detached GPG signature (FREECELL_GPG_KEY), plus a signed
+#     SHA256SUMS and latest.json, the in-app update checker's feed.
+# Then it tags the release v<version> and creates a GitHub Release with all of it.
+# Windows and macOS are best effort: if they didn't build or can't be signed, the
+# release goes out without them.
+#
+# Merge staging -> main pull requests with "Create a merge commit": the PR's head is
+# then the merge commit's second parent, which is what this looks up.
+#
+# workflow_dispatch is a dry run for testing: it signs the artifacts of the given
+# build run (or the newest build of the branch's head) and uploads the result as an
+# artifact, without tagging or releasing.
+name: release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run:
+        description: "build.yml run ID to sign (default: the newest build of this commit)"
+        required: false
+
+permissions:
+  contents: write   # tag and release
+  actions: read     # read the pull request's build run and its artifacts
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    # Creating the main branch is a push too; there is nothing to publish yet.
+    if: ${{ !github.event.created }}
+    runs-on: ubuntu-latest
+    # Includes waiting for the pull request's build to finish.
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+      INPUT_RUN: ${{ github.event.inputs.run }}
+    outputs:
+      run: ${{ steps.build.outputs.run }}
+      version: ${{ steps.build.outputs.version }}
+      dry_run: ${{ steps.build.outputs.dry_run }}
+      macos: ${{ steps.build.outputs.macos }}
+      windows: ${{ steps.build.outputs.windows }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Find the build
+        id: build
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = push ] && [ "$GITHUB_REF" = refs/heads/main ]; then
+            dry_run=false
+            head=$(git rev-parse HEAD^2 2>/dev/null) || {
+              echo "::error::$GITHUB_SHA is not a merge commit; merge staging into main with 'Create a merge commit'"
+              exit 1
+            }
+            # The published artifacts were built from the PR head; they match main
+            # only if the merge changed nothing on top of it.
+            if ! git diff --quiet "$head" HEAD; then
+              echo "::error::main differs from the merged staging head $head; its build would not match"
+              exit 1
+            fi
+            run=$(gh run list -R "$GITHUB_REPOSITORY" --workflow build.yml --commit "$head" \
+                    --json databaseId,event \
+                    -q 'map(select(.event == "pull_request")) | .[0].databaseId')
+          else
+            dry_run=true
+            head=$GITHUB_SHA
+            run=${INPUT_RUN:-$(gh run list -R "$GITHUB_REPOSITORY" --workflow build.yml --commit "$head" \
+                                 --json databaseId -q '.[0].databaseId')}
+          fi
+          [ -n "$run" ] || { echo "::error::no build run for $head"; exit 1; }
+          # Auto-merge lands the PR once the required checks pass, while the
+          # best-effort jobs (Windows, macOS) may still be building: wait for the
+          # whole run, since its artifacts are what gets published.
+          if [ "$(gh run view "$run" -R "$GITHUB_REPOSITORY" --json status -q .status)" != completed ]; then
+            echo "Waiting for build run $run to finish"
+            gh run watch "$run" -R "$GITHUB_REPOSITORY" --interval 60 >/dev/null || true
+          fi
+          conclusion() {
+            gh run view "$run" -R "$GITHUB_REPOSITORY" --json jobs \
+              -q ".jobs[] | select(.name == \"$1\") | .conclusion"
+          }
+          [ "$(conclusion linux-appimage)" = success ] || {
+            echo "::error::build $run: linux-appimage is '$(conclusion linux-appimage)'"
+            exit 1
+          }
+          for job in macos windows; do
+            if [ "$(conclusion "$job")" = success ]; then
+              echo "$job=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "::warning::build $run: $job is '$(conclusion "$job")'; releasing without it"
+              echo "$job=false" >> "$GITHUB_OUTPUT"
+            fi
+          done
+          version=$(scripts/ci/version.sh)
+          if [ "$dry_run" = false ] && git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            echo "::error::v$version is already released"
+            exit 1
+          fi
+          {
+            echo "run=$run"
+            echo "version=$version"
+            echo "dry_run=$dry_run"
+          } >> "$GITHUB_OUTPUT"
+          echo "Build run $run for $head, releasing v$version (dry run: $dry_run)" >> "$GITHUB_STEP_SUMMARY"
+
+  sign-macos:
+    needs: prepare
+    if: needs.prepare.outputs.macos == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Download the build
+        run: gh run download "${{ needs.prepare.outputs.run }}" -R "$GITHUB_REPOSITORY" -n freecell-macos -D dist
+      - name: Sign and make the .dmg
+        env:
+          FREECELL_CODESIGN_P12: ${{ secrets.FREECELL_CODESIGN_P12 }}
+          FREECELL_CODESIGN_PASSWORD: ${{ secrets.FREECELL_CODESIGN_PASSWORD }}
+        run: scripts/ci/sign-macos.sh dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: signed-macos
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  sign-windows:
+    needs: prepare
+    if: needs.prepare.outputs.windows == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Download the build
+        run: gh run download "${{ needs.prepare.outputs.run }}" -R "$GITHUB_REPOSITORY" -n freecell-windows -D dist
+      - name: Install osslsigncode
+        run: sudo apt-get install -y --no-install-recommends osslsigncode >/dev/null
+      - name: Sign
+        env:
+          FREECELL_CODESIGN_P12: ${{ secrets.FREECELL_CODESIGN_P12 }}
+          FREECELL_CODESIGN_PASSWORD: ${{ secrets.FREECELL_CODESIGN_PASSWORD }}
+        run: scripts/ci/sign-windows.sh dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: signed-windows
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  publish:
+    needs: [prepare, sign-macos, sign-windows]
+    # The signing jobs are best effort: publish once prepare succeeded, whatever they did.
+    if: ${{ !cancelled() && needs.prepare.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Collect the files
+        env:
+          MACOS: ${{ needs.sign-macos.result }}
+          WINDOWS: ${{ needs.sign-windows.result }}
+        run: |
+          set -euo pipefail
+          gh run download "${{ needs.prepare.outputs.run }}" -R "$GITHUB_REPOSITORY" -n freecell-linux -D dist
+          for platform in macos windows; do
+            result=MACOS; [ "$platform" = windows ] && result=WINDOWS
+            if [ "${!result}" = success ]; then
+              gh run download "$GITHUB_RUN_ID" -R "$GITHUB_REPOSITORY" -n "signed-$platform" -D dist
+            else
+              echo "::warning::$platform is '${!result}'; releasing without it"
+            fi
+          done
+          ls -la dist
+
+      - name: Sign
+        env:
+          FREECELL_GPG_KEY: ${{ secrets.FREECELL_GPG_KEY }}
+        run: scripts/ci/sign-release.sh dist "$VERSION"
+
+      - name: Upload the dry run
+        if: needs.prepare.outputs.dry_run == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-dry-run
+          path: dist/*
+          retention-days: 7
+          compression-level: 0
+
+      - name: Tag
+        if: needs.prepare.outputs.dry_run == 'false'
+        run: |
+          set -euo pipefail
+          git tag "v$VERSION" "$GITHUB_SHA"
+          git push origin "v$VERSION"
+
+      - name: GitHub Release
+        if: needs.prepare.outputs.dry_run == 'false'
+        run: |
+          set -euo pipefail
+          gh release create "v$VERSION" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "FreeCell $VERSION" --generate-notes dist/*
