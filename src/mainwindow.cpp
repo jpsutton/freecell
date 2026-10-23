@@ -58,9 +58,9 @@ MainWindow::MainWindow() {
     auto* help = menuBar()->addMenu(tr("&Help"));
     add(help, tr("&About FreeCell"), QKeySequence(), [this] {
         QMessageBox::about(this, tr("About FreeCell"),
-                           tr("FreeCell clone (Qt).\nSelect Game numbers 1-1000000 use the "
+                           tr("FreeCell %1\n\nA Windows XP FreeCell clone (Qt).\nSelect Game numbers 1-1000000 use the "
                               "Microsoft FreeCell deal algorithm. New Game deals a random "
-                              "shuffle."));
+                              "shuffle.").arg(QCoreApplication::applicationVersion()));
     });
 
     connect(m_board, &Board::stateChanged, this, &MainWindow::updateStatus);
