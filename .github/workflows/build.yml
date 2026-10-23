@@ -44,7 +44,7 @@ jobs:
           cache: true
       - name: Build
         run: |
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DFREECELL_UPDATER=ON
           cmake --build build
       - name: Logic tests
         run: ctest --test-dir build --output-on-failure
@@ -74,7 +74,7 @@ jobs:
           cache: true
       - name: Build
         run: |
-          cmake -S . -B build -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release -DFREECELL_UPDATER=ON
           cmake --build build
       - name: Logic tests
         run: ctest --test-dir build --output-on-failure
@@ -100,7 +100,7 @@ jobs:
           cache: true
       - name: Build
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DFREECELL_UPDATER=ON \
             -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0
           cmake --build build
       - name: Logic tests

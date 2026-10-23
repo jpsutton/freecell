@@ -1,5 +1,6 @@
 #pragma once
 #include <QMainWindow>
+#include <QStringList>
 #include <vector>
 
 #include "board.h"
@@ -7,6 +8,7 @@
 
 class QAction;
 class QLabel;
+class Updater;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -32,6 +34,9 @@ private:
     Stats m_stats;
     QLabel* m_left;
     QString m_gameName;
+    Updater* m_updater = nullptr;
+    QString m_restartProgram;  // set when an installed update asks to restart
+    QStringList m_restartArgs;
     bool m_messages = true;
     bool m_animations = true;
 };

@@ -52,6 +52,18 @@ The Windows and macOS builds are best effort. They are signed with FreeCell's
 own certificate, not one bought from Microsoft or Apple, so both systems warn
 you the first time you open them.
 
+### Updates
+
+The macOS app and the AppImage update themselves. A few seconds after FreeCell
+starts, it checks the latest release. When there is a newer version, it offers
+**Update**, **Skip This Version** or **Later**. **Help › Check for Updates**
+checks on demand, and **Game › Options › Check for updates at startup** turns
+the startup check off.
+
+An update is checked against the SHA-256 in the release's `latest.json`. On
+macOS it must also be signed with the same certificate as the installed app.
+On Windows, **Update** opens the download page instead.
+
 ### macOS
 
 The easiest way to install or update is the install script. It downloads the
@@ -116,6 +128,10 @@ self-signed certificate for "FreeCell (jpsutton)" with SHA-256 fingerprint
 Requirements: CMake 3.16 or later, a C++17 compiler, and Qt 6 with the
 `Widgets` and `Svg` modules.
 
+A build from source doesn't check for updates. To build the update checker in,
+as the release builds do, configure with `-DFREECELL_UPDATER=ON` (it also needs
+Qt's `Network` module).
+
 ```bash
 cmake -S . -B build
 cmake --build build
@@ -150,11 +166,12 @@ resumes that game.
 | Game > Select Game... | F3 | Plays a Microsoft deal, 1 to 1000000. |
 | Game > Restart Game | | Re-deals the current game. Does not ask to resign or record a loss. |
 | Game > Statistics... | F4 | Session and all-time won/lost, percentage, current and longest streaks. The Clear button resets both. |
-| Game > Options... | F5 | "Play animations", "Display messages" and "Card style" (Classic or Refined; see [Card art](#card-art)). |
+| Game > Options... | F5 | "Play animations", "Display messages", "Card style" (Classic or Refined; see [Card art](#card-art)) and, in release builds, "Check for updates at startup". |
 | Game > Undo | Ctrl+Z | Unlimited undo. One undo also reverses the auto-play moves that followed it. |
 | Game > Hint | F10 | Highlights the suggested card(s) and outlines the target in yellow. |
 | Game > Exit | | Saves the game in progress and quits. |
-| Help > About FreeCell | | |
+| Help > Check for Updates... | | Release builds only. See [Updates](#updates). |
+| Help > About FreeCell | | Shows the version. |
 
 The "Cards Left" count shows in the top-right corner of the menu bar, and the
 window title shows the game number.
@@ -204,6 +221,7 @@ match yet.
   Select Game (F3) still plays the numbered Microsoft deals.
 - The window opens at 1280x960, twice XP's size, and the whole board scales
   with the window width.
+- Release builds check GitHub for new versions and can update themselves.
 - There is an optional "Refined" card style with softer colors and thinner
   borders. The default "Classic" style uses XP's colors.
 
@@ -233,6 +251,7 @@ match yet.
 | `src/board_consts.h` | Logical layout constants (card size, board width, margins). |
 | `src/mainwindow.h`, `src/mainwindow.cpp` | Menus, dialogs, Options, game start, resign, save and resume, and the status text. |
 | `src/stats.h`, `src/stats.cpp` | Win/loss statistics and the Statistics dialog. |
+| `src/updater.h`, `src/updater.cpp` | The update checker (release builds only): reads `latest.json`, downloads, verifies and installs updates. |
 | `src/main.cpp` | Entry point. |
 | `tests/gametest.cpp` | Logic tests for `fccore` (no Qt needed). |
 | `assets/faces/faithful/`, `assets/faces/refined/`, `assets/cards.qrc` | SVG card faces for the two card styles, compiled into the binary under `:/faces/<style>/`. |
@@ -305,6 +324,8 @@ match yet.
 - `saved/name`, `saved/deal`, `saved/moves`: the game in progress at exit, as
   its title, its 52-card deal order and its move history. On the next start the
   moves are replayed onto the deal, and the saved game is then removed.
+- `updates/check` (the startup check is on unless this is `false`) and
+  `updates/skip` (the version the user chose to skip)
 
 Session statistics live in memory only.
 

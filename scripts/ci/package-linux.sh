@@ -27,7 +27,8 @@ chmod +x "$tools"/*
 export APPIMAGE_EXTRACT_AND_RUN=1
 export PATH=$tools:$PATH
 export QMAKE=$QT_ROOT_DIR/bin/qmake
-export EXTRA_QT_MODULES="svg"
+# network: the update checker's TLS plugins.
+export EXTRA_QT_MODULES="svg;network"
 # Native Wayland when the Qt install has it; otherwise Qt falls back to X11 (XWayland).
 if [[ -f $QT_ROOT_DIR/plugins/platforms/libqwayland-generic.so ]]; then
   export EXTRA_PLATFORM_PLUGINS="libqwayland-generic.so"
