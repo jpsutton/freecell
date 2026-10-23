@@ -23,6 +23,7 @@ concurrency:
 
 env:
   QT_VERSION: 6.10.1
+  NDK_VERSION: 27.2.12479018   # the NDK Qt 6.10 is built with
 
 jobs:
   # The oldest supported Ubuntu runner (24.04) sets the glibc the AppImage needs (2.39).
@@ -111,6 +112,56 @@ jobs:
         with:
           name: freecell-macos
           path: dist/*.app.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  # Debug-signed arm64 APK for testing; not a release build (no signing key is
+  # set up), so release.yml does not publish it. Best effort, like Windows and macOS.
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Build tools and the Android SDK parts Qt needs
+        run: |
+          sudo apt-get update >/dev/null
+          sudo apt-get install -y --no-install-recommends ninja-build >/dev/null
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install \
+            "platforms;android-36" "build-tools;36.0.0" "ndk;${NDK_VERSION}" >/dev/null
+      # The desktop Qt supplies moc, rcc and androiddeployqt to the Android build.
+      - uses: jurplel/install-qt-action@v4
+        id: qt-host
+        with:
+          version: ${{ env.QT_VERSION }}
+          dir: ${{ runner.temp }}/qt-host
+          set-env: false
+          cache: true
+      - uses: jurplel/install-qt-action@v4
+        id: qt-android
+        with:
+          version: ${{ env.QT_VERSION }}
+          target: android
+          arch: android_arm64_v8a
+          dir: ${{ runner.temp }}/qt-android
+          set-env: false
+          cache: true
+      - name: APK
+        env:
+          QT_HOST: ${{ runner.temp }}/qt-host/Qt/${{ env.QT_VERSION }}/gcc_64
+          QT_ANDROID: ${{ runner.temp }}/qt-android/Qt/${{ env.QT_VERSION }}/android_arm64_v8a
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_HOME }}
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/${{ env.NDK_VERSION }}
+        run: scripts/ci/package-android.sh build-android dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: freecell-android
+          path: dist/*.apk
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
