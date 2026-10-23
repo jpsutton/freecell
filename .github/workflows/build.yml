@@ -1,0 +1,116 @@
+# Full build on pull requests into main: the package for every platform. The
+# Linux AppImage is required for a release; the Windows and macOS builds are best
+# effort (not required checks): a release ships them if they built. Nothing is
+# signed here. release.yml takes the artifacts of the final PR head, signs them and
+# publishes them without rebuilding.
+# workflow_dispatch runs it on any branch, for testing the build itself.
+name: build
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# staging is the head of the staging -> main pull request, so every merge into
+# staging pushes to it and starts a new full build. Only the newest head matters,
+# so a push cancels the build still running for the previous one.
+concurrency:
+  group: build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  QT_VERSION: 6.10.1
+
+jobs:
+  # The oldest supported Ubuntu runner (24.04) sets the glibc the AppImage needs (2.39).
+  linux-appimage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build tools and the libraries Qt's X11 and Wayland plugins load
+        run: |
+          sudo apt-get update >/dev/null
+          sudo apt-get install -y --no-install-recommends ninja-build libgl-dev libegl1 \
+            libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+            libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 \
+            libwayland-client0 libwayland-cursor0 libwayland-egl1 >/dev/null
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          cache: true
+      - name: Build
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DFREECELL_UPDATER=ON
+          cmake --build build
+      - name: Logic tests
+        run: ctest --test-dir build --output-on-failure
+      - name: AppImage
+        run: scripts/ci/package-linux.sh build dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: freecell-linux
+          path: dist/*.AppImage
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          arch: win64_msvc2022_64
+          cache: true
+      - name: Build
+        run: |
+          cmake -S . -B build -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release -DFREECELL_UPDATER=ON
+          cmake --build build
+      - name: Logic tests
+        run: ctest --test-dir build --output-on-failure
+      - name: Zip
+        run: scripts/ci/package-windows.sh build dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: freecell-windows
+          path: dist/*.zip
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  # Apple silicon only; Qt 6.10 needs macOS 13 or newer.
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          cache: true
+      - name: Build
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DFREECELL_UPDATER=ON \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0
+          cmake --build build
+      - name: Logic tests
+        run: ctest --test-dir build --output-on-failure
+      - name: Bundle
+        run: scripts/ci/package-macos.sh build dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: freecell-macos
+          path: dist/*.app.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0

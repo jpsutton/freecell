@@ -11,12 +11,17 @@
 #include <QLabel>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QProcess>
 #include <QRandomGenerator>
 #include <QSettings>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <algorithm>
 #include <random>
+
+#ifdef FREECELL_UPDATER
+#include "updater.h"
+#endif
 
 MainWindow::MainWindow() {
     setWindowTitle(tr("FreeCell"));
@@ -56,11 +61,21 @@ MainWindow::MainWindow() {
     add(game, tr("E&xit"), QKeySequence(), [this] { close(); });
 
     auto* help = menuBar()->addMenu(tr("&Help"));
+#ifdef FREECELL_UPDATER
+    m_updater = new Updater(this);
+    connect(m_updater, &Updater::restartRequested, this, [this](const QString& program, const QStringList& args) {
+        m_restartProgram = program;
+        m_restartArgs = args;
+        close();
+    });
+    add(help, tr("Check for &Updates..."), QKeySequence(), [this] { m_updater->checkNow(); });
+    help->addSeparator();
+#endif
     add(help, tr("&About FreeCell"), QKeySequence(), [this] {
         QMessageBox::about(this, tr("About FreeCell"),
-                           tr("FreeCell clone (Qt).\nSelect Game numbers 1-1000000 use the "
+                           tr("FreeCell %1\n\nA Windows XP FreeCell clone (Qt).\nSelect Game numbers 1-1000000 use the "
                               "Microsoft FreeCell deal algorithm. New Game deals a random "
-                              "shuffle."));
+                              "shuffle.").arg(QCoreApplication::applicationVersion()));
     });
 
     connect(m_board, &Board::stateChanged, this, &MainWindow::updateStatus);
@@ -72,6 +87,9 @@ MainWindow::MainWindow() {
 
     resize(1280, 960 + menuBar()->sizeHint().height());
     if (!loadSavedGame()) startMsGame(1 + QRandomGenerator::global()->bounded(32000));
+#ifdef FREECELL_UPDATER
+    m_updater->checkAtStartup();
+#endif
 }
 
 // A game in progress at exit is saved as its deal plus move history and
@@ -189,6 +207,11 @@ void MainWindow::showOptions() {
     styleRow->addWidget(styleLabel);
     styleRow->addWidget(style, 1);
     lay->addLayout(styleRow);
+#ifdef FREECELL_UPDATER
+    auto* updates = new QCheckBox(tr("Check for &updates at startup"));
+    updates->setChecked(Updater::checkAtStartupEnabled());
+    lay->addWidget(updates);
+#endif
     auto* bb = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
     lay->addWidget(bb);
     connect(bb, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
@@ -198,6 +221,9 @@ void MainWindow::showOptions() {
     m_messages = msg->isChecked();
     m_board->setAnimations(m_animations);
     m_board->setCardStyle(style->currentData().toString());
+#ifdef FREECELL_UPDATER
+    Updater::setCheckAtStartup(updates->isChecked());
+#endif
     QSettings s;
     s.setValue("options/messages", m_messages);
     s.setValue("options/animations", m_animations);
@@ -207,4 +233,5 @@ void MainWindow::showOptions() {
 void MainWindow::closeEvent(QCloseEvent* e) {
     saveGame();
     e->accept();
+    if (!m_restartProgram.isEmpty()) QProcess::startDetached(m_restartProgram, m_restartArgs);
 }

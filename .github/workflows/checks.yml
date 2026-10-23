@@ -1,0 +1,118 @@
+# Checks on every pull request (into staging and into main): static checks, and a
+# Linux build with the logic tests. No packages; build.yml does those for pull
+# requests into main.
+#
+# A pull request that only touches docs skips the build. It still reports (as
+# skipped), which satisfies the required checks, so the PR can merge.
+name: checks
+
+on:
+  pull_request:
+    branches: [staging, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read   # list the pull request's files
+
+concurrency:
+  group: checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Whether the pull request changes anything besides docs (Markdown, docs/ and
+  # LICENSE). Anything else, a manual run, or a PR too big to list counts as source.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      source: ${{ steps.files.outputs.source }}
+    steps:
+      - id: files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          CHANGED: ${{ github.event.pull_request.changed_files }}
+        run: |
+          set -euo pipefail
+          source=false
+          if [ -z "$PR" ] || [ "$CHANGED" -ge 3000 ]; then
+            source=true
+          else
+            # Renames list both names, so moving a source file into docs/ counts.
+            while IFS= read -r f; do
+              case $f in
+                docs/*|*.md|LICENSE) ;;
+                *) source=true ;;
+              esac
+            done < <(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" \
+                       -q '.[] | .filename, (.previous_filename // empty)')
+          fi
+          echo "source=$source" >> "$GITHUB_OUTPUT"
+          [ "$source" = true ] || echo "Docs only: skipping the build" >> "$GITHUB_STEP_SUMMARY"
+
+  # main only takes what staging has: changes go feature branch -> staging -> main.
+  source-branch:
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull requests into main must come from staging
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          if [ "$HEAD_REF" != staging ] || [ "$HEAD_REPO" != "$GITHUB_REPOSITORY" ]; then
+            echo "::error::main takes pull requests from staging only (this one is from $HEAD_REPO:$HEAD_REF)"
+            exit 1
+          fi
+
+  # A release is tagged v<version>, so a pull request into main needs a version
+  # that has not been released yet.
+  version:
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: The version is new
+        run: |
+          version=$(scripts/ci/version.sh)
+          if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            echo "::error::v$version is already released; bump the version in CMakeLists.txt"
+            exit 1
+          fi
+          echo "Releases as v$version" >> "$GITHUB_STEP_SUMMARY"
+
+  static:
+    needs: changes
+    # Runs unless changes found docs only; if changes itself failed, this still runs.
+    if: ${{ !cancelled() && needs.changes.outputs.source != 'false' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install tools
+        run: sudo apt-get install -y --no-install-recommends shellcheck desktop-file-utils >/dev/null
+      - run: scripts/ci/check.sh
+      - name: actionlint
+        uses: docker://rhysd/actionlint:latest
+        with:
+          args: -color
+
+  linux:
+    needs: changes
+    # Runs unless changes found docs only; if changes itself failed, this still runs.
+    if: ${{ !cancelled() && needs.changes.outputs.source != 'false' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Qt
+        run: |
+          sudo apt-get update >/dev/null
+          sudo apt-get install -y --no-install-recommends ninja-build qt6-base-dev qt6-svg-dev libgl-dev >/dev/null
+      - name: Build
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DFREECELL_UPDATER=ON -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
+          cmake --build build
+      - name: Logic tests
+        run: ctest --test-dir build --output-on-failure
