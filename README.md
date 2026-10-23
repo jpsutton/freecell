@@ -274,6 +274,12 @@ The styles differ only in color and border:
 | Classic (`faithful`) | `#FF0000` | `#000000` | `#FFFF00` | `#0000FF` | 1 unit | 3 units |
 | Refined (`refined`) | `#D40019` | `#111111` | `#F6CB16` | `#1C47B8` | 0.75 unit | 3.5 units |
 
+## License
+
+The code is released under the [MIT License](LICENSE). The court card art in
+`assets/cards/` and the faces built from it are public domain (see
+`assets/cards/README-upstream.md`).
+
 FreeCell and Windows are trademarks of Microsoft. This project is an
 independent fan recreation and is not affiliated with Microsoft. It contains
 no Microsoft code or bitmaps.
