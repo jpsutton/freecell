@@ -155,8 +155,8 @@ jobs:
         env:
           QT_HOST: ${{ runner.temp }}/qt-host/Qt/${{ env.QT_VERSION }}/gcc_64
           QT_ANDROID: ${{ runner.temp }}/qt-android/Qt/${{ env.QT_VERSION }}/android_arm64_v8a
-          ANDROID_SDK_ROOT: ${{ env.ANDROID_HOME }}
-          ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/${{ env.NDK_VERSION }}
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+          ANDROID_NDK_ROOT: /usr/local/lib/android/sdk/ndk/${{ env.NDK_VERSION }}
           UNSIGNED: 1   # release.yml signs it with the release key
         run: scripts/ci/package-android.sh build-android dist
       - uses: actions/upload-artifact@v7
