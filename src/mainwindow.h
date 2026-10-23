@@ -8,6 +8,7 @@
 
 class QAction;
 class QLabel;
+class TouchShell;
 class Updater;
 
 class MainWindow : public QMainWindow {
@@ -32,7 +33,9 @@ private:
 
     Board* m_board;
     Stats m_stats;
-    QLabel* m_left;
+    QLabel* m_left = nullptr;       // desktop: "Cards Left" in the menu bar
+    TouchShell* m_shell = nullptr;  // touch: app bar and board
+    QAction* m_undo;
     QString m_gameName;
     Updater* m_updater = nullptr;
     QString m_restartProgram;  // set when an installed update asks to restart

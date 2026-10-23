@@ -4,6 +4,7 @@
 constexpr int kCW = 71;    // card width
 constexpr int kCH = 96;    // card height
 constexpr int kLW = 632;   // logical board width (XP client width at 640x480)
+constexpr int kLH = 434;   // logical board height (XP client height at 640x480)
 constexpr int kTopY = 0;   // free cell / foundation row y
 constexpr int kCY = 106;   // cascade start y
 constexpr int kGap = (kLW - 8 * kCW) / 9;  // gap around and between cascades (7)

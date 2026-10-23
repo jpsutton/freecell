@@ -17,9 +17,22 @@ const QColor kBright(0, 255, 0);
 const QColor kDark(0, 0, 0);
 }  // namespace
 
-double Board::scale() const { return width() / double(kLW); }
+double Board::scale() const {
+    if (m_letterbox) return std::min(width() / double(kLW), height() / double(kLH));
+    return width() / double(kLW);
+}
 
-double Board::logicalHeight() const { return height() / scale(); }
+double Board::logicalHeight() const { return m_letterbox ? kLH : height() / scale(); }
+
+QPointF Board::origin() const {
+    if (!m_letterbox) return QPointF();
+    return QPointF((width() - kLW * scale()) / 2, (height() - kLH * scale()) / 2);
+}
+
+void Board::toLogical(QPainter& p) const {
+    p.translate(origin());
+    p.scale(scale(), scale());
+}
 
 double Board::offset() const {
     size_t n = 0;
@@ -41,10 +54,15 @@ QPointF Board::cardPos(Area a, int idx, int k) const {
     }
 }
 
-QPointF Board::logical(const QPointF& p) const { return p / scale(); }
+QPointF Board::logical(const QPointF& p) const { return (p - origin()) / scale(); }
 
 QSize Board::minimumSizeHint() const { return QSize(480, 360); }
-QSize Board::sizeHint() const { return QSize(kLW, 434); }
+QSize Board::sizeHint() const { return QSize(kLW, kLH); }
+
+void Board::setLetterbox(bool on) {
+    m_letterbox = on;
+    update();
+}
 
 void Board::resizeEvent(QResizeEvent*) {
     if (m_cascade) stopCascade();
@@ -216,6 +234,7 @@ void Board::paintEvent(QPaintEvent*) {
         p.drawPixmap(0, 0, m_buf);
         return;
     }
-    p.scale(scale(), scale());
+    if (m_letterbox) p.fillRect(rect(), kFelt);
+    toLogical(p);
     paintBoard(p, true);
 }
