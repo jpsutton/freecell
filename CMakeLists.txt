@@ -7,7 +7,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
+# Release builds (CI) check GitHub for new versions; builds from source don't.
+option(FREECELL_UPDATER "Check GitHub releases for updates" OFF)
+
 find_package(Qt6 REQUIRED COMPONENTS Widgets Svg)
+if(FREECELL_UPDATER)
+    find_package(Qt6 REQUIRED COMPONENTS Network)
+endif()
 
 add_library(fccore STATIC src/game.cpp src/game.h)
 target_include_directories(fccore PUBLIC src)
@@ -21,6 +27,11 @@ add_executable(freecell WIN32 MACOSX_BUNDLE
 )
 target_link_libraries(freecell PRIVATE fccore Qt6::Widgets Qt6::Svg)
 target_compile_definitions(freecell PRIVATE FREECELL_VERSION="${PROJECT_VERSION}")
+if(FREECELL_UPDATER)
+    target_sources(freecell PRIVATE src/updater.cpp src/updater.h)
+    target_compile_definitions(freecell PRIVATE FREECELL_UPDATER)
+    target_link_libraries(freecell PRIVATE Qt6::Network)
+endif()
 
 if(APPLE)
     set(icns ${CMAKE_SOURCE_DIR}/packaging/macos/FreeCell.icns)

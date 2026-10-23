@@ -112,7 +112,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends ninja-build qt6-base-dev qt6-svg-dev libgl-dev >/dev/null
       - name: Build
         run: |
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DFREECELL_UPDATER=ON -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
           cmake --build build
       - name: Logic tests
         run: ctest --test-dir build --output-on-failure
