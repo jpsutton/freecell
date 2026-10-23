@@ -1,0 +1,72 @@
+{
+  "repo": {
+    "timestamp": 1792791438000,
+    "version": 20002,
+    "name": "FreeCell",
+    "icon": "icon.png",
+    "address": "https://jpsutton.github.io/freecell/fdroid/repo",
+    "description": "FreeCell, a Windows XP FreeCell clone. Built and signed by the release workflow of https://github.com/jpsutton/freecell."
+  },
+  "requests": {
+    "install": [],
+    "uninstall": []
+  },
+  "apps": [
+    {
+      "categories": [
+        "Games"
+      ],
+      "changelog": "https://github.com/jpsutton/freecell/releases",
+      "suggestedVersionCode": "200",
+      "description": "A FreeCell clone that plays like the Windows XP original. Select Game numbers\n1 to 1000000 use the Microsoft FreeCell deal algorithm, so a numbered game\ndeals the same cards as it did on Windows. New Game deals a random shuffle.\n\nFeatures: undo, hints, statistics, a saved game that resumes where you left\noff, and the winning card cascade. No ads, no tracking and no network access.",
+      "issueTracker": "https://github.com/jpsutton/freecell/issues",
+      "license": "MIT",
+      "name": "FreeCell",
+      "sourceCode": "https://github.com/jpsutton/freecell",
+      "summary": "The Windows XP FreeCell, with the original deal numbers",
+      "webSite": "https://github.com/jpsutton/freecell",
+      "added": 1792791434000,
+      "packageName": "io.github.jpsutton.freecell",
+      "lastUpdated": 1792791434000
+    }
+  ],
+  "packages": {
+    "io.github.jpsutton.freecell": [
+      {
+        "added": 1792791434000,
+        "apkName": "FreeCell-0.2.0-arm64-v8a.apk",
+        "hash": "80dc07b7ab76e5e233410b823812409437c44e9dfa9bcf1a6d99a42fcadc90eb",
+        "hashType": "sha256",
+        "minSdkVersion": 28,
+        "nativecode": [
+          "arm64-v8a"
+        ],
+        "packageName": "io.github.jpsutton.freecell",
+        "sig": "e073568001d120cbc761f59088d0d3bc",
+        "signer": "d24b35c58899df5aac11bf07d3b531100c3cb17f4e638c7b004ea98ae3adca2a",
+        "size": 39250267,
+        "targetSdkVersion": 36,
+        "uses-permission": [
+          [
+            "android.permission.INTERNET",
+            null
+          ],
+          [
+            "android.permission.WRITE_EXTERNAL_STORAGE",
+            null
+          ],
+          [
+            "io.github.jpsutton.freecell.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION",
+            null
+          ],
+          [
+            "android.permission.READ_EXTERNAL_STORAGE",
+            null
+          ]
+        ],
+        "versionCode": 200,
+        "versionName": "0.2.0"
+      }
+    ]
+  }
+}
