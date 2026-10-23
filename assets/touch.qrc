@@ -1,0 +1,9 @@
+<RCC>
+  <!-- App bar icons for the touch layout (Material Icons, Apache License 2.0). -->
+  <qresource prefix="/touch">
+    <file alias="undo.svg">touch/undo.svg</file>
+    <file alias="hint.svg">touch/hint.svg</file>
+    <file alias="new.svg">touch/new.svg</file>
+    <file alias="more.svg">touch/more.svg</file>
+  </qresource>
+</RCC>

@@ -1,0 +1,18 @@
+Categories:
+  - Games
+License: MIT
+WebSite: https://github.com/jpsutton/freecell
+SourceCode: https://github.com/jpsutton/freecell
+IssueTracker: https://github.com/jpsutton/freecell/issues
+Changelog: https://github.com/jpsutton/freecell/releases
+
+AutoName: FreeCell
+Name: FreeCell
+Summary: The Windows XP FreeCell, with the original deal numbers
+Description: |-
+  A FreeCell clone that plays like the Windows XP original. Select Game numbers
+  1 to 1000000 use the Microsoft FreeCell deal algorithm, so a numbered game
+  deals the same cards as it did on Windows. New Game deals a random shuffle.
+
+  Features: undo, hints, statistics, a saved game that resumes where you left
+  off, and the winning card cascade. No ads, no tracking and no network access.

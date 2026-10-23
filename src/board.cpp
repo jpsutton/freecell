@@ -1,6 +1,8 @@
 #include "board.h"
 
+#include <QGuiApplication>
 #include <QMouseEvent>
+#include <QStyleHints>
 #include <QPainter>
 #include <QRandomGenerator>
 #include <algorithm>
@@ -83,6 +85,16 @@ Board::Hit Board::hitTest(const QPointF& p) const {
         return h;
     }
     return h;
+}
+
+// Movement (logical units) before a press becomes a drag. A finger wobbles
+// more than a mouse, so touch screens use the platform's drag distance.
+double Board::dragSlop() const {
+#ifdef FREECELL_TOUCH_UI
+    return std::max(4.0, QGuiApplication::styleHints()->startDragDistance() / scale());
+#else
+    return 4;
+#endif
 }
 
 bool Board::draggable(const Hit& h) const {
@@ -174,7 +186,7 @@ void Board::mouseMoveEvent(QMouseEvent* e) {
     setKingLeft(p.x() < kLW / 2.0);
     if (!m_pressing) return;
     if (!m_dragging) {
-        if ((p - m_pressPos).manhattanLength() <= 4) return;
+        if ((p - m_pressPos).manhattanLength() <= dragSlop()) return;
         m_dragging = true;
         m_dragCards.clear();
         if (m_pressHit.area == Area::Cell) {
@@ -357,17 +369,18 @@ void Board::tick() {
             m_cur.x += m_cur.vx;
             m_cur.y += m_cur.vy;
             m_cur.vy += 0.5;
-            double floorY = logicalHeight() - kCH;
+            QPointF tl = logical(QPointF(0, 0)), br = logical(QPointF(width(), height()));
+            double floorY = br.y() - kCH;
             if (m_cur.y > floorY) {
                 m_cur.y = floorY;
                 m_cur.vy = -m_cur.vy * 0.8;
             }
             QPainter bp(&m_buf);
             bp.setRenderHint(QPainter::SmoothPixmapTransform);
-            bp.scale(scale(), scale());
+            toLogical(bp);
             const QPixmap& pm = cardPixmap(m_cur.card);
             bp.drawPixmap(QRectF(m_cur.x, m_cur.y, kCW, kCH), pm, QRectF(pm.rect()));
-            if (m_cur.x < -kCW || m_cur.x > kLW) m_curActive = false;
+            if (m_cur.x < tl.x() - kCW || m_cur.x > br.x()) m_curActive = false;
         }
         update();
         return;
@@ -391,7 +404,8 @@ void Board::startCascade() {
     {
         QPainter bp(&m_buf);
         bp.setRenderHint(QPainter::SmoothPixmapTransform);
-        bp.scale(scale(), scale());
+        if (m_letterbox) bp.fillRect(rect(), QColor(0, 127, 0));
+        toLogical(bp);
         paintBoard(bp, false);
     }
     m_queue.clear();

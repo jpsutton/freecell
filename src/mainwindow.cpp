@@ -9,6 +9,7 @@
 #include <QDialogButtonBox>
 #include <QInputDialog>
 #include <QLabel>
+#include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QProcess>
@@ -22,11 +23,13 @@
 #ifdef FREECELL_UPDATER
 #include "updater.h"
 #endif
+#ifdef FREECELL_TOUCH_UI
+#include "touchui.h"
+#endif
 
 MainWindow::MainWindow() {
     setWindowTitle(tr("FreeCell"));
     m_board = new Board;
-    setCentralWidget(m_board);
 
     QSettings s;
     m_messages = s.value("options/messages", true).toBool();
@@ -35,30 +38,74 @@ MainWindow::MainWindow() {
     m_board->setCardStyle(s.value("options/cardStyle", "faithful").toString() == "refined" ? "refined" : "faithful");
     m_stats.load();
 
+    auto act = [&](const QString& text, const QKeySequence& key, auto slot) {
+        auto* a = new QAction(text, this);
+        if (!key.isEmpty()) a->setShortcut(key);
+        connect(a, &QAction::triggered, this, slot);
+        return a;
+    };
+    QAction* newGame = act(tr("&New Game"), Qt::Key_F2, [this] { newRandomGame(); });
+    QAction* select = act(tr("&Select Game..."), Qt::Key_F3, [this] { selectGame(); });
+    QAction* restart = act(tr("&Restart Game"), QKeySequence(), [this] {
+        m_board->restartGame();
+    });
+    QAction* stats = act(tr("S&tatistics..."), Qt::Key_F4, [this] { showStatsDialog(this, m_stats); });
+    QAction* options = act(tr("&Options..."), Qt::Key_F5, [this] { showOptions(); });
+    m_undo = act(tr("&Undo"), QKeySequence(Qt::CTRL | Qt::Key_Z), [this] { m_board->undo(); });
+    QAction* hint = act(tr("&Hint"), Qt::Key_F10, [this] { m_board->showHint(); });
+    QAction* about = act(tr("&About FreeCell"), QKeySequence(), [this] {
+        QMessageBox::about(this, tr("About FreeCell"),
+                           tr("FreeCell %1\n\nA Windows XP FreeCell clone (Qt).\nSelect Game numbers 1-1000000 use the "
+                              "Microsoft FreeCell deal algorithm. New Game deals a random "
+                              "shuffle.").arg(QCoreApplication::applicationVersion()));
+    });
+
+#ifdef FREECELL_TOUCH_UI
+    // An app bar replaces the menu bar; the shell keeps clear of the system
+    // bars itself.
+    setAttribute(Qt::WA_ContentsMarginsRespectsSafeArea, false);
+    m_board->setLetterbox(true);
+    m_shell = new TouchShell(m_board);
+    setCentralWidget(m_shell);
+    m_shell->addBarAction(m_undo, QStringLiteral(":/touch/undo.svg"));
+    m_shell->addBarAction(hint, QStringLiteral(":/touch/hint.svg"));
+    m_shell->addBarAction(newGame, QStringLiteral(":/touch/new.svg"));
+    QMenu* more = m_shell->overflowMenu();
+    more->addAction(select);
+    more->addAction(restart);
+    more->addSeparator();
+    more->addAction(stats);
+    more->addAction(options);
+    more->addSeparator();
+    more->addAction(about);
+    // Touch menus show no mnemonics, shortcut keys or dialog ellipses.
+    for (QAction* a : {newGame, select, restart, stats, options, m_undo, hint, about}) {
+        a->setText(a->text().remove('&').remove(QStringLiteral("...")));
+        a->setShortcut(QKeySequence());
+    }
+    // Android can stop a backgrounded app without closing its window, so
+    // save the game whenever the app leaves the foreground.
+    connect(qApp, &QGuiApplication::applicationStateChanged, this, [this](Qt::ApplicationState st) {
+        if (st == Qt::ApplicationSuspended) saveGame();
+    });
+#else
+    setCentralWidget(m_board);
     m_left = new QLabel;
     m_left->setContentsMargins(0, 0, 8, 0);
     menuBar()->setCornerWidget(m_left, Qt::TopRightCorner);
 
     auto* game = menuBar()->addMenu(tr("&Game"));
-    auto add = [&](QMenu* m, const QString& text, const QKeySequence& key, auto slot) {
-        QAction* a = m->addAction(text);
-        if (!key.isEmpty()) a->setShortcut(key);
-        connect(a, &QAction::triggered, this, slot);
-        return a;
-    };
-    add(game, tr("&New Game"), Qt::Key_F2, [this] { newRandomGame(); });
-    add(game, tr("&Select Game..."), Qt::Key_F3, [this] { selectGame(); });
-    add(game, tr("&Restart Game"), QKeySequence(), [this] {
-        m_board->restartGame();
-    });
+    game->addAction(newGame);
+    game->addAction(select);
+    game->addAction(restart);
     game->addSeparator();
-    add(game, tr("S&tatistics..."), Qt::Key_F4, [this] { showStatsDialog(this, m_stats); });
-    add(game, tr("&Options..."), Qt::Key_F5, [this] { showOptions(); });
+    game->addAction(stats);
+    game->addAction(options);
     game->addSeparator();
-    add(game, tr("&Undo"), QKeySequence(Qt::CTRL | Qt::Key_Z), [this] { m_board->undo(); });
-    add(game, tr("&Hint"), Qt::Key_F10, [this] { m_board->showHint(); });
+    game->addAction(m_undo);
+    game->addAction(hint);
     game->addSeparator();
-    add(game, tr("E&xit"), QKeySequence(), [this] { close(); });
+    game->addAction(act(tr("E&xit"), QKeySequence(), [this] { close(); }));
 
     auto* help = menuBar()->addMenu(tr("&Help"));
 #ifdef FREECELL_UPDATER
@@ -68,15 +115,11 @@ MainWindow::MainWindow() {
         m_restartArgs = args;
         close();
     });
-    add(help, tr("Check for &Updates..."), QKeySequence(), [this] { m_updater->checkNow(); });
+    help->addAction(act(tr("Check for &Updates..."), QKeySequence(), [this] { m_updater->checkNow(); }));
     help->addSeparator();
 #endif
-    add(help, tr("&About FreeCell"), QKeySequence(), [this] {
-        QMessageBox::about(this, tr("About FreeCell"),
-                           tr("FreeCell %1\n\nA Windows XP FreeCell clone (Qt).\nSelect Game numbers 1-1000000 use the "
-                              "Microsoft FreeCell deal algorithm. New Game deals a random "
-                              "shuffle.").arg(QCoreApplication::applicationVersion()));
-    });
+    help->addAction(about);
+#endif
 
     connect(m_board, &Board::stateChanged, this, &MainWindow::updateStatus);
     connect(m_board, &Board::gameWon, this, &MainWindow::onWon);
@@ -85,7 +128,9 @@ MainWindow::MainWindow() {
         if (m_messages) QMessageBox::information(this, tr("FreeCell"), tr("There are no hints available."));
     });
 
+#ifndef FREECELL_TOUCH_UI
     resize(1280, 960 + menuBar()->sizeHint().height());
+#endif
     if (!loadSavedGame()) startMsGame(1 + QRandomGenerator::global()->bounded(32000));
 #ifdef FREECELL_UPDATER
     m_updater->checkAtStartup();
@@ -168,7 +213,12 @@ void MainWindow::startMsGame(quint32 number) {
 }
 
 void MainWindow::updateStatus() {
+#ifdef FREECELL_TOUCH_UI
+    m_shell->setStatus(m_gameName, m_board->game().cardsLeft());
+    m_undo->setEnabled(m_board->game().canUndo());
+#else
     m_left->setText(tr("Cards Left: %1").arg(m_board->game().cardsLeft()));
+#endif
     setWindowTitle(tr("FreeCell Game %1").arg(m_gameName));
 }
 

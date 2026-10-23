@@ -28,6 +28,9 @@ public:
     // Card face style: a folder under :/faces/ ("faithful" or "refined").
     void setCardStyle(const QString& style);
     const QString& cardStyle() const { return m_style; }
+    // Keep the board at XP's kLW x kLH aspect ratio, centred on felt padding,
+    // instead of scaling it to the widget's width (touch layout).
+    void setLetterbox(bool on);
 
     bool gameInProgress() const;
     const fc::Game& game() const { return m_game; }
@@ -77,6 +80,9 @@ private:
     double logicalHeight() const;
     double offset() const;
     double scale() const;
+    QPointF origin() const;  // widget position of logical (0, 0)
+    void toLogical(QPainter& p) const;
+    double dragSlop() const;
     QPointF cascadePos(int col, int k) const;
     QPointF cellPos(int i) const;
     QPointF foundPos(int i) const;
@@ -113,6 +119,7 @@ private:
     QElapsedTimer m_clock;
     QTimer m_timer;
     bool m_animate = true;
+    bool m_letterbox = false;
 
     // press / drag
     bool m_pressing = false;
