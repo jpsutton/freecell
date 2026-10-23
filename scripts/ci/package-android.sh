@@ -5,7 +5,8 @@
 # ANDROID_SDK_ROOT and ANDROID_NDK_ROOT, and JAVA_HOME. Writes
 # <out-dir>/FreeCell-<version>-arm64-v8a.apk. A release build comes out unsigned,
 # so it is signed here with a throwaway debug key: that APK installs for testing
-# but is not a release (Play or sideload) build.
+# but is not a release build. With UNSIGNED=1 the unsigned APK is written as it is,
+# for release.yml to sign with the release key.
 set -euo pipefail
 build=$(realpath -m "${1:?build dir}")
 out=$(realpath -m "${2:?out dir}")
@@ -23,7 +24,7 @@ cmake --build "$build" --target apk
 
 apk=$(find "$build/android-build" -name '*.apk' -path '*outputs*' | head -1)
 [[ -n $apk ]] || { echo "no APK was built" >&2; exit 1; }
-if [[ $apk == *unsigned* ]]; then
+if [[ $apk == *unsigned* && -z ${UNSIGNED:-} ]]; then
   ks=$build/debug.keystore
   rm -f "$ks"
   keytool -genkeypair -keystore "$ks" -storepass android -keypass android \

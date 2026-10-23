@@ -116,8 +116,8 @@ jobs:
           retention-days: 14
           compression-level: 0
 
-  # Debug-signed arm64 APK for testing; not a release build (no signing key is
-  # set up), so release.yml does not publish it. Best effort, like Windows and macOS.
+  # The arm64 APK, unsigned: release.yml signs it with the release key and adds it
+  # to the F-Droid repository. Best effort, like Windows and macOS.
   android:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -157,6 +157,7 @@ jobs:
           QT_ANDROID: ${{ runner.temp }}/qt-android/Qt/${{ env.QT_VERSION }}/android_arm64_v8a
           ANDROID_SDK_ROOT: ${{ env.ANDROID_HOME }}
           ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/${{ env.NDK_VERSION }}
+          UNSIGNED: 1   # release.yml signs it with the release key
         run: scripts/ci/package-android.sh build-android dist
       - uses: actions/upload-artifact@v7
         with:
