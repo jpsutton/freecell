@@ -47,14 +47,39 @@ Download FreeCell from the [Releases page](https://github.com/jpsutton/freecell/
 | Linux | `FreeCell-<version>-x86_64.AppImage`. Needs glibc 2.39 or newer (Ubuntu 24.04, Debian 13, Fedora 40 or newer, Arch). |
 | Windows | `FreeCell-<version>-windows-x64.zip` (Windows 10 or 11, 64-bit) |
 | macOS | `FreeCell-<version>-macos-arm64.dmg` (Apple silicon, macOS 13 or newer) |
+| Android | `FreeCell-<version>-arm64-v8a.apk` (64-bit ARM, Android 9 or newer), or the [F-Droid repository](#android) |
 
 The Windows and macOS builds are best effort. They are signed with FreeCell's
 own certificate, not one bought from Microsoft or Apple, so both systems warn
 you the first time you open them.
 
+### Android
+
+The easiest way to install and keep FreeCell up to date is FreeCell's own
+F-Droid repository, which works with F-Droid, Droid-ify and Neo Store. On the
+phone, add a repository with:
+
+- Address: `https://jpsutton.github.io/freecell/fdroid/repo`
+- Fingerprint: `2398539B128504C1A12494EA9ABE06E7A90C5CD7F25872B7C6D8383033AF28FD`
+
+The page at <https://jpsutton.github.io/freecell/fdroid/> has the same
+address and fingerprint, and a link that adds the repository directly. The
+fingerprint belongs to the repository's own key. Check it before you trust the
+repository.
+
+You can also install the APK from the Releases page by hand. Both routes give
+you the same file, signed with the same app key. Android refuses to update an
+app with a build signed by a different key, so uninstall a test or debug build
+first (this erases the saved game and statistics). The app does not check for
+updates itself: it has no network access, and F-Droid does that job.
+
+The Android build uses a touch layout: an app bar with undo, hint and new game,
+and an overflow menu for the rest. Tap a card, then its destination, to move
+it, or double-tap a card to send it to a foundation or free cell.
+
 ### Updates
 
-The macOS app and the AppImage update themselves. A few seconds after FreeCell
+The macOS app and the AppImage update themselves. Android updates through F-Droid (see above). A few seconds after FreeCell
 starts, it checks the latest release. When there is a newer version, it offers
 **Update**, **Skip This Version** or **Later**. **Help › Check for Updates**
 checks on demand, and **Game › Options › Check for updates at startup** turns
@@ -358,13 +383,20 @@ Changes go through two branches:
    that pull request's build without rebuilding, signs it, tags `v<version>`
    and publishes the GitHub Release.
 
-The release workflow signs with three repository secrets:
+The release workflow signs with these repository secrets:
 
 | Secret | What it is |
 | --- | --- |
 | `FREECELL_GPG_KEY` | The armored GPG private key (no passphrase) that signs every file and `SHA256SUMS` |
 | `FREECELL_CODESIGN_P12` | The code-signing certificate and its key, as a base64 PKCS#12 file. Signs the macOS app (`codesign`) and `FreeCell.exe` (Authenticode, with `osslsigncode`). |
 | `FREECELL_CODESIGN_PASSWORD` | The PKCS#12 file's password |
+| `FREECELL_APK_KEYSTORE`, `FREECELL_APK_KEYSTORE_PASS` | The Android app signing key (base64 PKCS#12) and its password. Signs the APK. Android refuses an update signed with a different key, so this key must never change. |
+| `FREECELL_FDROID_KEYSTORE`, `FREECELL_FDROID_KEYSTORE_PASS` | The F-Droid repository's own signing key (base64 PKCS#12) and its password. Its fingerprint is what users check when they add the repository. |
+
+The release workflow also publishes the F-Droid repository to the `gh-pages`
+branch under `/fdroid`, with `scripts/ci/fdroid-repo.sh`. Each release adds its
+APK and rewrites the branch as one fresh commit, so it never grows past a few
+APKs. The app's listing text is in `packaging/android/fdroid/`.
 
 The public halves are in `packaging/`. Keep the private keys: a new code-signing
 certificate would change the macOS app's identity, so the install script and
