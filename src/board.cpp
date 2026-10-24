@@ -244,6 +244,13 @@ void Board::mouseReleaseEvent(QMouseEvent* e) {
 }
 
 void Board::mouseDoubleClickEvent(QMouseEvent* e) {
+#ifdef FREECELL_TOUCH_UI
+    // Two quick taps (select a card, then its destination) arrive as a double
+    // click in place of the second press. Handle it as a plain tap so the move
+    // is made, not an auto-move of the card under the second tap.
+    mousePressEvent(e);
+    return;
+#endif
     if (e->button() != Qt::LeftButton || m_cascade || m_flight.active) return;
     Hit h = hitTest(logical(e->position()));
     m_sel.on = false;
