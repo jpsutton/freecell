@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 # The release version. Bump it in the staging -> main pull request; scripts/ci/version.sh reads it.
-project(freecell VERSION 0.2.0 LANGUAGES CXX)
+project(freecell VERSION 0.2.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -38,6 +38,7 @@ set(freecell_sources
     src/mainwindow.cpp src/mainwindow.h
     src/board.cpp src/board_paint.cpp src/board.h src/board_consts.h
     src/stats.cpp src/stats.h
+    src/dialogs.cpp src/dialogs.h
     assets/cards.qrc
 )
 if(FREECELL_TOUCH_UI)

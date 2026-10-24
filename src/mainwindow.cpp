@@ -3,15 +3,15 @@
 #include <QAction>
 #include <QApplication>
 #include <QCheckBox>
-#include <QComboBox>
 #include <QCloseEvent>
 #include <QDialog>
 #include <QDialogButtonBox>
+#include <QGroupBox>
+#include <QRadioButton>
 #include <QInputDialog>
 #include <QLabel>
 #include <QMenu>
 #include <QMenuBar>
-#include <QMessageBox>
 #include <QProcess>
 #include <QRandomGenerator>
 #include <QSettings>
@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <random>
 
+#include "dialogs.h"
 #ifdef FREECELL_UPDATER
 #include "updater.h"
 #endif
@@ -54,8 +55,8 @@ MainWindow::MainWindow() {
     m_undo = act(tr("&Undo"), QKeySequence(Qt::CTRL | Qt::Key_Z), [this] { m_board->undo(); });
     QAction* hint = act(tr("&Hint"), Qt::Key_F10, [this] { m_board->showHint(); });
     QAction* about = act(tr("&About FreeCell"), QKeySequence(), [this] {
-        QMessageBox::about(this, tr("About FreeCell"),
-                           tr("FreeCell %1\n\nA Windows XP FreeCell clone (Qt).\nSelect Game numbers 1-1000000 use the "
+        dialogs::tell(this, tr("About FreeCell"),
+                      tr("FreeCell %1\n\nA Windows XP FreeCell clone (Qt).\nSelect Game numbers 1-1000000 use the "
                               "Microsoft FreeCell deal algorithm. New Game deals a random "
                               "shuffle.").arg(QCoreApplication::applicationVersion()));
     });
@@ -70,14 +71,13 @@ MainWindow::MainWindow() {
     m_shell->addBarAction(m_undo, QStringLiteral(":/touch/undo.svg"));
     m_shell->addBarAction(hint, QStringLiteral(":/touch/hint.svg"));
     m_shell->addBarAction(newGame, QStringLiteral(":/touch/new.svg"));
-    QMenu* more = m_shell->overflowMenu();
-    more->addAction(select);
-    more->addAction(restart);
-    more->addSeparator();
-    more->addAction(stats);
-    more->addAction(options);
-    more->addSeparator();
-    more->addAction(about);
+    m_shell->addMenuAction(select);
+    m_shell->addMenuAction(restart);
+    m_shell->addMenuSeparator();
+    m_shell->addMenuAction(stats);
+    m_shell->addMenuAction(options);
+    m_shell->addMenuSeparator();
+    m_shell->addMenuAction(about);
     // Touch menus show no mnemonics, shortcut keys or dialog ellipses.
     for (QAction* a : {newGame, select, restart, stats, options, m_undo, hint, about}) {
         a->setText(a->text().remove('&').remove(QStringLiteral("...")));
@@ -125,7 +125,7 @@ MainWindow::MainWindow() {
     connect(m_board, &Board::gameWon, this, &MainWindow::onWon);
     connect(m_board, &Board::gameStuck, this, &MainWindow::onStuck);
     connect(m_board, &Board::noHint, this, [this] {
-        if (m_messages) QMessageBox::information(this, tr("FreeCell"), tr("There are no hints available."));
+        if (m_messages) dialogs::tell(this, tr("FreeCell"), tr("There are no hints available."));
     });
 
 #ifndef FREECELL_TOUCH_UI
@@ -175,35 +175,48 @@ bool MainWindow::loadSavedGame() {
     return true;
 }
 
-bool MainWindow::confirmResign() {
-    if (!m_board->gameInProgress()) return true;
-    if (m_messages &&
-        QMessageBox::question(this, tr("FreeCell"), tr("Do you want to resign this game?")) !=
-            QMessageBox::Yes)
-        return false;
-    m_stats.record(false);
-    return true;
+// Runs `proceed` once the game in progress, if any, is resigned.
+void MainWindow::confirmResign(std::function<void()> proceed) {
+    if (!m_board->gameInProgress()) {
+        proceed();
+        return;
+    }
+    auto resign = [this, proceed] {
+        m_stats.record(false);
+        proceed();
+    };
+    if (m_messages)
+        dialogs::ask(this, tr("FreeCell"), tr("Do you want to resign this game?"),
+                     [resign](bool yes) { if (yes) resign(); });
+    else
+        resign();
 }
 
 void MainWindow::newRandomGame() {
-    if (!confirmResign()) return;
-    quint32 seed = QRandomGenerator::global()->generate();
-    std::vector<int> deck(52);
-    for (int i = 0; i < 52; ++i) deck[i] = i;
-    std::mt19937 rng(seed);
-    std::shuffle(deck.begin(), deck.end(), rng);
-    m_gameName = tr("Random %1").arg(seed, 8, 16, QLatin1Char('0')).toUpper();
-    m_board->startGame(deck);
-    updateStatus();
+    confirmResign([this] {
+        quint32 seed = QRandomGenerator::global()->generate();
+        std::vector<int> deck(52);
+        for (int i = 0; i < 52; ++i) deck[i] = i;
+        std::mt19937 rng(seed);
+        std::shuffle(deck.begin(), deck.end(), rng);
+        m_gameName = tr("Random %1").arg(seed, 8, 16, QLatin1Char('0')).toUpper();
+        m_board->startGame(deck);
+        updateStatus();
+    });
 }
 
 void MainWindow::selectGame() {
-    bool ok = false;
-    int n = QInputDialog::getInt(this, tr("Select Game"),
-                                 tr("Game number (1 - 1000000):"), 1, 1, 1000000, 1, &ok);
-    if (!ok) return;
-    if (!confirmResign()) return;
-    startMsGame(quint32(n));
+    auto* dlg = new QInputDialog(this);
+    dlg->setWindowTitle(tr("Select Game"));
+    dlg->setLabelText(tr("Game number (1 - 1000000):"));
+    dlg->setInputMode(QInputDialog::IntInput);
+    dlg->setIntRange(1, 1000000);
+    dlg->setIntValue(1);
+    dialogs::open(this, dlg, [this, dlg](int result) {
+        if (result != QDialog::Accepted) return;
+        quint32 n = quint32(dlg->intValue());
+        confirmResign([this, n] { startMsGame(n); });
+    });
 }
 
 void MainWindow::startMsGame(quint32 number) {
@@ -225,38 +238,35 @@ void MainWindow::updateStatus() {
 void MainWindow::onWon() {
     m_stats.record(true);
     if (!m_messages) return;
-    auto r = QMessageBox::question(
-        this, tr("FreeCell"),
-        tr("Congratulations, you win!\n\nWon: %1  Lost: %2\n\nDo you want to play again?")
-            .arg(m_stats.total.wins).arg(m_stats.total.losses));
-    if (r == QMessageBox::Yes) newRandomGame();
+    dialogs::ask(this, tr("FreeCell"),
+                 tr("Congratulations, you win!\n\nWon: %1  Lost: %2\n\nDo you want to play again?")
+                     .arg(m_stats.total.wins).arg(m_stats.total.losses),
+                 [this](bool yes) { if (yes) newRandomGame(); });
 }
 
 void MainWindow::onStuck() {
-    if (m_messages)
-        QMessageBox::information(this, tr("FreeCell"), tr("Sorry, there are no more moves."));
+    if (m_messages) dialogs::tell(this, tr("FreeCell"), tr("Sorry, there are no more moves."));
 }
 
 void MainWindow::showOptions() {
-    QDialog dlg(this);
-    dlg.setWindowTitle(tr("Options"));
-    auto* lay = new QVBoxLayout(&dlg);
+    auto* dlg = new QDialog(this);
+    dlg->setWindowTitle(tr("Options"));
+    auto* lay = new QVBoxLayout(dlg);
     auto* anim = new QCheckBox(tr("Play animations"));
     anim->setChecked(m_animations);
     auto* msg = new QCheckBox(tr("Display messages"));
     msg->setChecked(m_messages);
     lay->addWidget(anim);
     lay->addWidget(msg);
-    auto* styleRow = new QHBoxLayout;
-    auto* style = new QComboBox;
-    style->addItem(tr("Classic (XP colors)"), QStringLiteral("faithful"));
-    style->addItem(tr("Refined"), QStringLiteral("refined"));
-    style->setCurrentIndex(style->findData(m_board->cardStyle()));
-    auto* styleLabel = new QLabel(tr("&Card style:"));
-    styleLabel->setBuddy(style);
-    styleRow->addWidget(styleLabel);
-    styleRow->addWidget(style, 1);
-    lay->addLayout(styleRow);
+    // Radio buttons, not a combo box: its drop-down list is a new window.
+    auto* styleBox = new QGroupBox(tr("Card style"));
+    auto* styleLay = new QVBoxLayout(styleBox);
+    auto* classic = new QRadioButton(tr("Classic (XP colors)"));
+    auto* refined = new QRadioButton(tr("Refined"));
+    (m_board->cardStyle() == QLatin1String("refined") ? refined : classic)->setChecked(true);
+    styleLay->addWidget(classic);
+    styleLay->addWidget(refined);
+    lay->addWidget(styleBox);
 #ifdef FREECELL_UPDATER
     auto* updates = new QCheckBox(tr("Check for &updates at startup"));
     updates->setChecked(Updater::checkAtStartupEnabled());
@@ -264,20 +274,22 @@ void MainWindow::showOptions() {
 #endif
     auto* bb = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
     lay->addWidget(bb);
-    connect(bb, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
-    connect(bb, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
-    if (dlg.exec() != QDialog::Accepted) return;
-    m_animations = anim->isChecked();
-    m_messages = msg->isChecked();
-    m_board->setAnimations(m_animations);
-    m_board->setCardStyle(style->currentData().toString());
+    connect(bb, &QDialogButtonBox::accepted, dlg, &QDialog::accept);
+    connect(bb, &QDialogButtonBox::rejected, dlg, &QDialog::reject);
+    dialogs::open(this, dlg, [=](int result) {
+        if (result != QDialog::Accepted) return;
+        m_animations = anim->isChecked();
+        m_messages = msg->isChecked();
+        m_board->setAnimations(m_animations);
+        m_board->setCardStyle(refined->isChecked() ? QStringLiteral("refined") : QStringLiteral("faithful"));
 #ifdef FREECELL_UPDATER
-    Updater::setCheckAtStartup(updates->isChecked());
+        Updater::setCheckAtStartup(updates->isChecked());
 #endif
-    QSettings s;
-    s.setValue("options/messages", m_messages);
-    s.setValue("options/animations", m_animations);
-    s.setValue("options/cardStyle", m_board->cardStyle());
+        QSettings s;
+        s.setValue("options/messages", m_messages);
+        s.setValue("options/animations", m_animations);
+        s.setValue("options/cardStyle", m_board->cardStyle());
+    });
 }
 
 void MainWindow::closeEvent(QCloseEvent* e) {

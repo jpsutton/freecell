@@ -23,5 +23,5 @@ public:
     StatBlock total;
 };
 
-// Modal statistics dialog (like MS FreeCell's Game > Statistics).
+// Modal statistics dialog; returns at once, the dialog closes itself (like MS FreeCell's Game > Statistics).
 void showStatsDialog(QWidget* parent, Stats& stats);
