@@ -265,5 +265,15 @@ void applyTouchStyle(QApplication& app) {
     app.styleHints()->setColorScheme(Qt::ColorScheme::Dark);
     app.setStyleSheet(QStringLiteral(
         "QPushButton { min-height: 40px; min-width: 72px; padding: 0 12px; }"
-        "QComboBox, QSpinBox, QCheckBox { min-height: 40px; }"));
+        "QComboBox, QSpinBox { min-height: 48px; }"
+        // Check boxes and radio buttons: a 32px glyph in a 56px row, easy to hit.
+        "QCheckBox, QRadioButton { spacing: 16px; min-height: 56px; }"
+        "QCheckBox::indicator, QRadioButton::indicator { width: 32px; height: 32px; }"
+        "QCheckBox::indicator:unchecked { image: url(:/touch/check-off.svg); }"
+        "QCheckBox::indicator:checked { image: url(:/touch/check-on.svg); }"
+        "QRadioButton::indicator:unchecked { image: url(:/touch/radio-off.svg); }"
+        "QRadioButton::indicator:checked { image: url(:/touch/radio-on.svg); }"
+        "QGroupBox { margin-top: 16px; }"
+        "QDialog { font-size: 17px; }"
+        "QDialog QPushButton { min-height: 48px; }"));
 }

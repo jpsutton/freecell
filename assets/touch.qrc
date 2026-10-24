@@ -1,9 +1,13 @@
 <RCC>
-  <!-- App bar icons for the touch layout (Material Icons, Apache License 2.0). -->
+  <!-- App bar and dialog control icons for the touch layout (Material Icons, Apache License 2.0). -->
   <qresource prefix="/touch">
     <file alias="undo.svg">touch/undo.svg</file>
     <file alias="hint.svg">touch/hint.svg</file>
     <file alias="new.svg">touch/new.svg</file>
     <file alias="more.svg">touch/more.svg</file>
+    <file alias="check-off.svg">touch/check-off.svg</file>
+    <file alias="check-on.svg">touch/check-on.svg</file>
+    <file alias="radio-off.svg">touch/radio-off.svg</file>
+    <file alias="radio-on.svg">touch/radio-on.svg</file>
   </qresource>
 </RCC>

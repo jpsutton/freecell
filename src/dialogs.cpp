@@ -40,7 +40,8 @@ public:
     void place() {
         setGeometry(m_top->rect());
         QSize s = m_dlg->size();
-        s.setWidth(qMin(s.width(), width() - 32));
+        // Wide enough for thumbs: nine tenths of the window, never past its edges.
+        s.setWidth(qMin(qMax(s.width(), width() * 9 / 10), width() - 32));
         s.setHeight(qMin(s.height(), height() - 32));
         m_dlg->resize(s);
         m_dlg->move((width() - s.width()) / 2, (height() - s.height()) / 2);
