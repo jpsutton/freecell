@@ -5,10 +5,11 @@
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QLabel>
-#include <QMessageBox>
 #include <QPushButton>
 #include <QSettings>
 #include <QVBoxLayout>
+
+#include "dialogs.h"
 
 void StatBlock::record(bool win) {
     if (win) {
@@ -81,9 +82,9 @@ static QWidget* blockWidget(const QString& title, const StatBlock& b) {
 }
 
 void showStatsDialog(QWidget* parent, Stats& stats) {
-    QDialog dlg(parent);
-    dlg.setWindowTitle(QObject::tr("FreeCell Statistics"));
-    auto* lay = new QVBoxLayout(&dlg);
+    auto* dlg = new QDialog(parent);
+    dlg->setWindowTitle(QObject::tr("FreeCell Statistics"));
+    auto* lay = new QVBoxLayout(dlg);
     auto* row = new QHBoxLayout;
     row->addWidget(blockWidget(QObject::tr("This session"), stats.session));
     row->addWidget(blockWidget(QObject::tr("Total"), stats.total));
@@ -91,15 +92,15 @@ void showStatsDialog(QWidget* parent, Stats& stats) {
     auto* bb = new QDialogButtonBox(QDialogButtonBox::Ok);
     auto* clear = bb->addButton(QObject::tr("Clear"), QDialogButtonBox::ResetRole);
     lay->addWidget(bb);
-    QObject::connect(bb, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
-    QObject::connect(clear, &QPushButton::clicked, &dlg, [&] {
-        if (QMessageBox::question(&dlg, QObject::tr("FreeCell"),
-                                  QObject::tr("Are you sure you want to clear all statistics?")) ==
-            QMessageBox::Yes) {
-            stats.clearTotal();
-            stats.session = StatBlock();
-            dlg.accept();
-        }
+    QObject::connect(bb, &QDialogButtonBox::accepted, dlg, &QDialog::accept);
+    QObject::connect(clear, &QPushButton::clicked, dlg, [dlg, &stats] {
+        dialogs::ask(dlg, QObject::tr("FreeCell"),
+                     QObject::tr("Are you sure you want to clear all statistics?"), [dlg, &stats](bool yes) {
+                         if (!yes) return;
+                         stats.clearTotal();
+                         stats.session = StatBlock();
+                         dlg->accept();
+                     });
     });
-    dlg.exec();
+    dialogs::open(parent, dlg);
 }

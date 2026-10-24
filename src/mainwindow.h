@@ -1,6 +1,7 @@
 #pragma once
 #include <QMainWindow>
 #include <QStringList>
+#include <functional>
 #include <vector>
 
 #include "board.h"
@@ -20,7 +21,7 @@ protected:
     void closeEvent(QCloseEvent*) override;
 
 private:
-    bool confirmResign();
+    void confirmResign(std::function<void()> proceed);
     void newRandomGame();
     void selectGame();
     void startMsGame(quint32 number);
