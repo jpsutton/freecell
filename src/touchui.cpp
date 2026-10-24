@@ -5,7 +5,11 @@
 #include <QBoxLayout>
 #include <QIcon>
 #include <QLabel>
-#include <QMenu>
+#include <QEvent>
+#include <QFrame>
+#include <QPushButton>
+#include <QTimer>
+#include <QVBoxLayout>
 #include <QPainter>
 #include <QStyleHints>
 #include <QSvgRenderer>
@@ -68,7 +72,7 @@ TouchShell::TouchShell(QWidget* board, QWidget* parent) : QWidget(parent), m_boa
         "QLabel { color: white; }"
         "QToolButton { border: none; border-radius: 24px; background: transparent; }"
         "QToolButton:pressed { background: rgba(255, 255, 255, 60); }"
-        "QToolButton::menu-indicator { image: none; width: 0; }"));
+        ""));
 
     m_title = new QLabel(tr("FreeCell"), m_bar);
     QFont tf = m_title->font();
@@ -81,11 +85,76 @@ TouchShell::TouchShell(QWidget* board, QWidget* parent) : QWidget(parent), m_boa
     m_status->setFont(sf);
     m_status->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
 
-    m_menu = new QMenu(this);
     m_more = barButton(m_bar);
     m_more->setIcon(barIcon(QStringLiteral(":/touch/more.svg")));
-    m_more->setMenu(m_menu);
-    m_more->setPopupMode(QToolButton::InstantPopup);
+    connect(m_more, &QToolButton::clicked, this, &TouchShell::toggleMenu);
+
+    m_menuLayer = new QWidget(this);
+    m_menuLayer->hide();
+    m_menuLayer->installEventFilter(this);
+    m_menuPanel = new QFrame(m_menuLayer);
+    m_menuPanel->setObjectName(QStringLiteral("touchMenu"));
+    m_menuPanel->setAttribute(Qt::WA_StyledBackground);
+    m_menuPanel->setAutoFillBackground(true);
+    m_menuPanel->setStyleSheet(QStringLiteral(
+        "#touchMenu { background: palette(window); border: 1px solid palette(mid); }"
+        "#touchMenu QPushButton { text-align: left; border: none; border-radius: 0;"
+        " min-height: 48px; padding: 0 40px 0 20px; background: transparent; }"
+        "#touchMenu QPushButton:pressed { background: palette(highlight); color: palette(highlighted-text); }"
+        "#touchMenu QFrame[separator=true] { background: palette(mid); max-height: 1px; min-height: 1px; }"));
+    m_menuLay = new QVBoxLayout(m_menuPanel);
+    m_menuLay->setContentsMargins(0, 8, 0, 8);
+    m_menuLay->setSpacing(0);
+}
+
+void TouchShell::addMenuAction(QAction* a) {
+    auto* b = new QPushButton(a->text(), m_menuPanel);
+    b->setFocusPolicy(Qt::NoFocus);
+    // Run the action once the menu has closed.
+    connect(b, &QPushButton::clicked, this, [this, a] {
+        closeMenu();
+        QTimer::singleShot(0, a, [a] { a->trigger(); });
+    });
+    m_menuLay->addWidget(b);
+}
+
+void TouchShell::addMenuSeparator() {
+    auto* line = new QFrame(m_menuPanel);
+    line->setProperty("separator", true);
+    m_menuLay->addSpacing(6);
+    m_menuLay->addWidget(line);
+    m_menuLay->addSpacing(6);
+}
+
+void TouchShell::toggleMenu() {
+    if (m_menuLayer->isVisible()) closeMenu();
+    else openMenu();
+}
+
+void TouchShell::closeMenu() { m_menuLayer->hide(); }
+
+void TouchShell::openMenu() {
+    m_menuLayer->setGeometry(rect());
+    m_menuLay->activate();
+    m_menuPanel->adjustSize();
+    QMargins safe;
+    if (QWindow* w = window()->windowHandle()) safe = w->safeAreaMargins();
+    QSize s = m_menuPanel->size().boundedTo(rect().marginsRemoved(safe).size() - QSize(16, 16));
+    // Below the app bar in portrait, left of the rail in landscape.
+    int x = (m_rail ? m_bar->x() : width() - safe.right()) - s.width() - 8;
+    int y = m_rail ? safe.top() + 8 : m_bar->geometry().bottom() + 4;
+    m_menuPanel->setGeometry(x, y, s.width(), s.height());
+    m_menuLayer->show();
+    m_menuLayer->raise();
+}
+
+bool TouchShell::eventFilter(QObject* o, QEvent* e) {
+    // A tap outside the panel closes it.
+    if (o == m_menuLayer && e->type() == QEvent::MouseButtonPress) {
+        closeMenu();
+        return true;
+    }
+    return QWidget::eventFilter(o, e);
 }
 
 void TouchShell::addBarAction(QAction* a, const QString& icon) {
@@ -163,7 +232,10 @@ void TouchShell::relayout() {
     m_board->setGeometry(area);
 }
 
-void TouchShell::resizeEvent(QResizeEvent*) { relayout(); }
+void TouchShell::resizeEvent(QResizeEvent*) {
+    closeMenu();
+    relayout();
+}
 
 void TouchShell::showEvent(QShowEvent*) {
     if (!m_watchingSafeArea) {
@@ -175,15 +247,23 @@ void TouchShell::showEvent(QShowEvent*) {
     relayout();
 }
 
+namespace {
+// A tooltip or a text context menu is a new window, which can abort the app
+// on Android; a long press would otherwise raise one.
+class NoPopups : public QObject {
+public:
+    using QObject::QObject;
+    bool eventFilter(QObject*, QEvent* e) override {
+        return e->type() == QEvent::ToolTip || e->type() == QEvent::ContextMenu;
+    }
+};
+}  // namespace
+
 void applyTouchStyle(QApplication& app) {
-    // Dark dialogs and menus, and light system bar icons over the dark app bar.
+    app.installEventFilter(new NoPopups(&app));
+    // Dark dialogs and menu, and light system bar icons over the dark app bar.
     app.styleHints()->setColorScheme(Qt::ColorScheme::Dark);
     app.setStyleSheet(QStringLiteral(
-        "QMenu { padding: 8px 0; }"
-        "QMenu::item { padding: 12px 40px 12px 20px; }"
-        "QMenu::item:selected { background: palette(highlight); color: palette(highlighted-text); }"
-        "QMenu::item:disabled { color: palette(mid); }"
-        "QMenu::separator { height: 1px; margin: 6px 0; background: palette(mid); }"
         "QPushButton { min-height: 40px; min-width: 72px; padding: 0 12px; }"
         "QComboBox, QSpinBox, QCheckBox { min-height: 40px; }"));
 }

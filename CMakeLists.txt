@@ -38,6 +38,7 @@ set(freecell_sources
     src/mainwindow.cpp src/mainwindow.h
     src/board.cpp src/board_paint.cpp src/board.h src/board_consts.h
     src/stats.cpp src/stats.h
+    src/dialogs.cpp src/dialogs.h
     assets/cards.qrc
 )
 if(FREECELL_TOUCH_UI)

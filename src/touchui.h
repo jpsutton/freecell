@@ -4,8 +4,10 @@
 
 class QAction;
 class QApplication;
+class QEvent;
 class QLabel;
-class QMenu;
+class QFrame;
+class QVBoxLayout;
 class QToolButton;
 
 // Touch-screen layout (Android) in place of the menu bar: an app bar with the
@@ -19,24 +21,33 @@ public:
     explicit TouchShell(QWidget* board, QWidget* parent = nullptr);
 
     void addBarAction(QAction* a, const QString& icon);
-    QMenu* overflowMenu() const { return m_menu; }
+    // The overflow menu is a panel inside the window: a QMenu is a popup
+    // window, and a second window can abort the app on Android.
+    void addMenuAction(QAction* a);
+    void addMenuSeparator();
     void setStatus(const QString& game, int cardsLeft);
 
 protected:
     void resizeEvent(QResizeEvent*) override;
     void showEvent(QShowEvent*) override;
+    bool eventFilter(QObject*, QEvent*) override;
 
 private:
     void relayout();
     void rebuildBar();
     void updateStatusText();
+    void toggleMenu();
+    void closeMenu();
+    void openMenu();
 
     QWidget* m_board;
     QWidget* m_bar;
     QLabel* m_title;
     QLabel* m_status;
     QToolButton* m_more;
-    QMenu* m_menu;
+    QWidget* m_menuLayer;  // transparent, covers the shell, closes the menu when tapped
+    QFrame* m_menuPanel;
+    QVBoxLayout* m_menuLay;
     std::vector<QToolButton*> m_buttons;
     bool m_rail = false;
     bool m_watchingSafeArea = false;
