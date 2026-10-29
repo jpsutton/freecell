@@ -1,0 +1,168 @@
+{
+  "repo": {
+    "name": {
+      "en-US": "FreeCell"
+    },
+    "description": {
+      "en-US": "FreeCell, a Windows XP FreeCell clone. Built and signed by the release workflow of https://github.com/jpsutton/freecell."
+    },
+    "icon": {
+      "en-US": {
+        "name": "/icons/icon.png",
+        "sha256": "970df4b0e35e9b33768d9e1d74fc4e5659e0b02fe7bdb135f9547dcaffac826b",
+        "size": 835
+      }
+    },
+    "address": "https://jpsutton.github.io/freecell/fdroid/repo",
+    "timestamp": 1793233466000,
+    "categories": {
+      "Games": {
+        "name": {
+          "en-US": "Games"
+        }
+      }
+    }
+  },
+  "packages": {
+    "io.github.jpsutton.freecell": {
+      "metadata": {
+        "added": 1792791434000,
+        "categories": [
+          "Games"
+        ],
+        "changelog": "https://github.com/jpsutton/freecell/releases",
+        "issueTracker": "https://github.com/jpsutton/freecell/issues",
+        "lastUpdated": 1793233462000,
+        "license": "MIT",
+        "sourceCode": "https://github.com/jpsutton/freecell",
+        "webSite": "https://github.com/jpsutton/freecell",
+        "name": {
+          "en-US": "FreeCell"
+        },
+        "summary": {
+          "en-US": "The Windows XP FreeCell, with the original deal numbers"
+        },
+        "description": {
+          "en-US": "A FreeCell clone that plays like the Windows XP original. Select Game numbers\n1 to 1000000 use the Microsoft FreeCell deal algorithm, so a numbered game\ndeals the same cards as it did on Windows. New Game deals a random shuffle.\n\nFeatures: undo, hints, statistics, a saved game that resumes where you left\noff, and the winning card cascade. No ads, no tracking and no network access."
+        },
+        "preferredSigner": "d24b35c58899df5aac11bf07d3b531100c3cb17f4e638c7b004ea98ae3adca2a"
+      },
+      "versions": {
+        "31f082d1052e88992191da308bb9976f40962701245d1ca3572bb9a8a1b5d048": {
+          "added": 1793233462000,
+          "file": {
+            "name": "/FreeCell-0.2.2-arm64-v8a.apk",
+            "sha256": "31f082d1052e88992191da308bb9976f40962701245d1ca3572bb9a8a1b5d048",
+            "size": 39283035
+          },
+          "manifest": {
+            "nativecode": [
+              "arm64-v8a"
+            ],
+            "versionName": "0.2.2",
+            "versionCode": 202,
+            "usesSdk": {
+              "minSdkVersion": 28,
+              "targetSdkVersion": 36
+            },
+            "signer": {
+              "sha256": [
+                "d24b35c58899df5aac11bf07d3b531100c3cb17f4e638c7b004ea98ae3adca2a"
+              ]
+            },
+            "usesPermission": [
+              {
+                "name": "android.permission.INTERNET"
+              },
+              {
+                "name": "android.permission.WRITE_EXTERNAL_STORAGE"
+              },
+              {
+                "name": "io.github.jpsutton.freecell.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+              },
+              {
+                "name": "android.permission.READ_EXTERNAL_STORAGE"
+              }
+            ]
+          }
+        },
+        "b8a2ba263d1899307b273e0e32aa4249aee2bbaef56297fb1acd19d734d28568": {
+          "added": 1792886478000,
+          "file": {
+            "name": "/FreeCell-0.2.1-arm64-v8a.apk",
+            "sha256": "b8a2ba263d1899307b273e0e32aa4249aee2bbaef56297fb1acd19d734d28568",
+            "size": 39283035
+          },
+          "manifest": {
+            "nativecode": [
+              "arm64-v8a"
+            ],
+            "versionName": "0.2.1",
+            "versionCode": 201,
+            "usesSdk": {
+              "minSdkVersion": 28,
+              "targetSdkVersion": 36
+            },
+            "signer": {
+              "sha256": [
+                "d24b35c58899df5aac11bf07d3b531100c3cb17f4e638c7b004ea98ae3adca2a"
+              ]
+            },
+            "usesPermission": [
+              {
+                "name": "android.permission.INTERNET"
+              },
+              {
+                "name": "android.permission.WRITE_EXTERNAL_STORAGE"
+              },
+              {
+                "name": "io.github.jpsutton.freecell.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+              },
+              {
+                "name": "android.permission.READ_EXTERNAL_STORAGE"
+              }
+            ]
+          }
+        },
+        "80dc07b7ab76e5e233410b823812409437c44e9dfa9bcf1a6d99a42fcadc90eb": {
+          "added": 1792791434000,
+          "file": {
+            "name": "/FreeCell-0.2.0-arm64-v8a.apk",
+            "sha256": "80dc07b7ab76e5e233410b823812409437c44e9dfa9bcf1a6d99a42fcadc90eb",
+            "size": 39250267
+          },
+          "manifest": {
+            "nativecode": [
+              "arm64-v8a"
+            ],
+            "versionName": "0.2.0",
+            "versionCode": 200,
+            "usesSdk": {
+              "minSdkVersion": 28,
+              "targetSdkVersion": 36
+            },
+            "signer": {
+              "sha256": [
+                "d24b35c58899df5aac11bf07d3b531100c3cb17f4e638c7b004ea98ae3adca2a"
+              ]
+            },
+            "usesPermission": [
+              {
+                "name": "android.permission.INTERNET"
+              },
+              {
+                "name": "android.permission.WRITE_EXTERNAL_STORAGE"
+              },
+              {
+                "name": "io.github.jpsutton.freecell.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+              },
+              {
+                "name": "android.permission.READ_EXTERNAL_STORAGE"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

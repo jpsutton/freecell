@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<fdroid>
+	<repo icon="icon.png" name="FreeCell" pubkey="308204f2308202daa003020102020900e83b4470d8fd787c300d06092a864886f70d01010c05003026312430220603550403131b4672656543656c6c20462d44726f6964207265706f7369746f72793020170d3236313032333231313731355a180f32313236303932393231313731355a3026312430220603550403131b4672656543656c6c20462d44726f6964207265706f7369746f727930820222300d06092a864886f70d01010105000382020f003082020a02820201009359949136939645ed6a9bcce38062d78723ca8cbf7ec97eff65c8c7670c6b691f9ff3217ca1bc88cf487ce23ec742edf814e48e12e647bb34e80dc913bf45ead9f6047a6ec877ad5b7e4a0e58a66a9cf7c19e1bd9f1358ba2cbdd052efc56fe75f636910edefa7cfb79ccc269bbbfc5cea6b17f45cb83c868dd699fd9e66c395d9166da7953b4fc7a21e7a91efb1f36cec5d4f0ee5d912fe0567c287ba49b2cda8edddd173215432d2ecde2ebb67694a90ff436af0d7e5555c11e163dba4eeb3975dacc95fcefde6135a4e234a94a91827191ae77e6f745a900a91a298ff237df05eb0a440deb372fb2d39b83cec6f02916cbbddd4e97e989a1c59ddadd87d6fff88e01e0f808220b6e566e99e0c7366c86f4aeb16737f4ff8e3de9004003c51e8c39d03eb3564d0f355855ab1f63306fccc08ff5c0df5b6e47dcfa7d8087bb2f605891afca4be2d8846f5ef42300e92a824a191b4aeb5906c72958580984ab5761041cb30e4b9d6c69041207a42c78394a91413fa92f5b0b1287ce0e51e25e4a8e762e8559a7d8febb9156dd5feb3fd2c3fcc46ee7f3c58006c796e04b428d2106da0b8f57ce1828da7f1d278ef023a50a9bd874ac4b6984a6a7ad4cca1a55076ad714569267767d531aad74ca5c917c878cabc88209ec01844a39eada93b933d635ee644f6655703be75a8d9298aaff33920ddb424c447f9a871736ac043f0203010001a321301f301d0603551d0e04160414b93c186fcd7d7c403eedd3b87ae81047d8d2275a300d06092a864886f70d01010c0500038202010006ffa633c1c352a4b9c2f702209a35a963b120ee8068005f11f9d5f54b40d6780b9738f8a1ad2fb8c53c36dfb6907a884e197113f296ded47ead2a7d3d95383dabd7c6d2221bdffcfbf96da46f4bf288363fa6e2b49d45ffa68971096cb64240e5e785e67a846332a54c4e870c8aef1ead648e5279c04e80ad0809353d6dd0a8305cdc48a9744d91b56bb54f9fbe6f6ee8bfbda4e579b3256207c77152d22c1b16608d1d7e42888c85caec99aa4f01a0e6f0571a1f2fae29d715a636c2f625652ddfb3a327f91ede64958ebcf174673635ebb2fda2b7a85d04d249dba5e3f2295f0fb9d126b0e476fdc9225896395b72ef96f75b5b3c95bfd2adb0adf9c614d9c5338867dc4266e2fc7bbe2ee20ecb56c54fc61709c23d459ad66d257353946a4f08523670e32500b09b96cb659e4a1674c308fe0b141d51dc70fea50399e9f0e3d56463e6d0f41b341daf7293698fa30a4d9c2afba46386e5079e68e620012a4927277ccbc26fd0336c4d8c8803b19ec6999cf4af888c0170e7a479fea9151e7dfc41c30d69f65c561d35f8c3354bc2ab85e0b5f0d7b3ae7b61295b80b40bdfc9ece8bb0f707c8c8a13a894cb433916bcdf7d1ae5ed3a9ac5acf79c3c544f9e68ac75382c8065e1f7afb64f60076d38bd875fd70847d7bdea6ae42f66847e5f47400bd9d8b8f9f6312c03376e553e8ed3135aae1e89ba8019a794d34bfba5e2" timestamp="1793233466" url="https://jpsutton.github.io/freecell/fdroid/repo" version="20002">
+		<description>FreeCell, a Windows XP FreeCell clone. Built and signed by the release workflow of https://github.com/jpsutton/freecell.</description>
+	</repo>
+	<application id="io.github.jpsutton.freecell">
+		<id>io.github.jpsutton.freecell</id>
+		<added>2026-10-23</added>
+		<lastupdated>2026-10-29</lastupdated>
+		<name>FreeCell</name>
+		<summary>The Windows XP FreeCell, with the original deal numbers</summary>
+		<desc>A FreeCell clone that plays like the Windows XP original. Select Game numbers
+1 to 1000000 use the Microsoft FreeCell deal algorithm, so a numbered game
+deals the same cards as it did on Windows. New Game deals a random shuffle.
+
+Features: undo, hints, statistics, a saved game that resumes where you left
+off, and the winning card cascade. No ads, no tracking and no network access.</desc>
+		<license>MIT</license>
+		<categories>Games</categories>
+		<category>Games</category>
+		<web>https://github.com/jpsutton/freecell</web>
+		<source>https://github.com/jpsutton/freecell</source>
+		<tracker>https://github.com/jpsutton/freecell/issues</tracker>
+		<changelog>https://github.com/jpsutton/freecell/releases</changelog>
+		<marketversion></marketversion>
+		<marketvercode>202</marketvercode>
+		<package>
+			<version>0.2.2</version>
+			<versioncode>202</versioncode>
+			<apkname>FreeCell-0.2.2-arm64-v8a.apk</apkname>
+			<hash type="sha256">31f082d1052e88992191da308bb9976f40962701245d1ca3572bb9a8a1b5d048</hash>
+			<size>39283035</size>
+			<sdkver>28</sdkver>
+			<targetSdkVersion>36</targetSdkVersion>
+			<added>2026-10-29</added>
+			<sig>e073568001d120cbc761f59088d0d3bc</sig>
+			<permissions>INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,io.github.jpsutton.freecell.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION</permissions>
+			<nativecode>arm64-v8a</nativecode>
+		</package>
+		<package>
+			<version>0.2.1</version>
+			<versioncode>201</versioncode>
+			<apkname>FreeCell-0.2.1-arm64-v8a.apk</apkname>
+			<hash type="sha256">b8a2ba263d1899307b273e0e32aa4249aee2bbaef56297fb1acd19d734d28568</hash>
+			<size>39283035</size>
+			<sdkver>28</sdkver>
+			<targetSdkVersion>36</targetSdkVersion>
+			<added>2026-10-25</added>
+			<sig>e073568001d120cbc761f59088d0d3bc</sig>
+			<permissions>INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,io.github.jpsutton.freecell.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION</permissions>
+			<nativecode>arm64-v8a</nativecode>
+		</package>
+		<package>
+			<version>0.2.0</version>
+			<versioncode>200</versioncode>
+			<apkname>FreeCell-0.2.0-arm64-v8a.apk</apkname>
+			<hash type="sha256">80dc07b7ab76e5e233410b823812409437c44e9dfa9bcf1a6d99a42fcadc90eb</hash>
+			<size>39250267</size>
+			<sdkver>28</sdkver>
+			<targetSdkVersion>36</targetSdkVersion>
+			<added>2026-10-23</added>
+			<sig>e073568001d120cbc761f59088d0d3bc</sig>
+			<permissions>INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,io.github.jpsutton.freecell.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION</permissions>
+			<nativecode>arm64-v8a</nativecode>
+		</package>
+	</application>
+</fdroid>
