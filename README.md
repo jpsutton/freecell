@@ -45,6 +45,7 @@ Download FreeCell from the [Releases page](https://github.com/jpsutton/freecell/
 | Platform | Download |
 | --- | --- |
 | Linux | `FreeCell-<version>-x86_64.AppImage`. Needs glibc 2.39 or newer (Ubuntu 24.04, Debian 13, Fedora 40 or newer, Arch). |
+| Arch Linux | `freecell-<version>-1-x86_64.pkg.tar.zst`, or the [jpsutton pacman repository](#arch-linux) |
 | Windows | `FreeCell-<version>-windows-x64.zip` (Windows 10 or 11, 64-bit) |
 | macOS | `FreeCell-<version>-macos-arm64.dmg` (Apple silicon, macOS 13 or newer) |
 | Android | `FreeCell-<version>-arm64-v8a.apk` (64-bit ARM, Android 9 or newer), or the [F-Droid repository](#android) |
@@ -126,6 +127,17 @@ chmod +x FreeCell-*-x86_64.AppImage
 
 ```bash
 ./FreeCell-*-x86_64.AppImage
+```
+
+### Arch Linux
+
+FreeCell is in the signed [jpsutton pacman repository](https://github.com/jpsutton/arch-repo),
+which also has the setup instructions. Pacman updates it, so this build has no update
+checker.
+
+```bash
+curl -fsSLO https://jpsutton.github.io/arch-repo/setup.sh
+bash setup.sh --install freecell
 ```
 
 ### Checking a download

@@ -59,6 +59,24 @@ jobs:
           retention-days: 14
           compression-level: 0
 
+  # The jpsutton pacman repository (jpsutton/arch-repo) republishes this package.
+  # It builds against the current Arch libraries, so it needs no Qt install step.
+  linux-arch:
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Package
+        run: scripts/ci/package-arch.sh dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: freecell-arch
+          path: dist/*.pkg.tar.zst
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
   windows:
     runs-on: windows-latest
     timeout-minutes: 45

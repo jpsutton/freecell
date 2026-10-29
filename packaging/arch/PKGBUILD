@@ -1,0 +1,44 @@
+# Maintainer: Jared Sutton <jpsutton@protonmail.com>
+#
+# Builds FreeCell from the source tree this file is in (release CI). The package has
+# no update checker: pacman updates it, from the jpsutton repository
+# (https://github.com/jpsutton/arch-repo).
+pkgname=freecell
+pkgver=0.2.1
+pkgrel=1
+pkgdesc="A clone of Windows XP FreeCell"
+arch=('x86_64')
+url="https://github.com/jpsutton/freecell"
+license=('MIT')
+depends=('qt6-base' 'qt6-svg')
+makedepends=('cmake' 'ninja')
+options=('!debug')
+_root="$(realpath "${startdir}/../..")"
+
+pkgver() {
+  sed -n 's/^project(freecell VERSION \([0-9][0-9.]*\) .*/\1/p' "${_root}/CMakeLists.txt"
+}
+
+build() {
+  cmake -S "${_root}" -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DFREECELL_UPDATER=OFF
+  cmake --build build
+}
+
+check() {
+  QT_QPA_PLATFORM=offscreen ctest --test-dir build --output-on-failure
+}
+
+package() {
+  DESTDIR="${pkgdir}" cmake --install build
+  for size in 16 24 32 48 64 128 512; do
+    install -Dm644 "${_root}/packaging/icons/freecell-${size}.png" \
+      "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/apps/io.github.jpsutton.freecell.png"
+  done
+  install -Dm644 "${_root}/packaging/icons/freecell.svg" \
+    "${pkgdir}/usr/share/icons/hicolor/scalable/apps/io.github.jpsutton.freecell.svg"
+  install -Dm644 "${_root}/README.md" -t "${pkgdir}/usr/share/doc/freecell/"
+  install -Dm644 "${_root}/LICENSE" -t "${pkgdir}/usr/share/licenses/freecell/"
+}

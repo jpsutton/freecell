@@ -4,6 +4,8 @@
 #   - macOS: FreeCell.app is code-signed with the release certificate
 #     (FREECELL_CODESIGN_P12), then packed as a .dmg and as the updater's tarball.
 #   - Windows: FreeCell.exe is Authenticode-signed with the same certificate.
+#   - Arch Linux: the package is built in build.yml; it gets only the GPG signature below,
+#     and jpsutton/arch-repo republishes it.
 #   - Every file: a detached GPG signature (FREECELL_GPG_KEY), plus a signed
 #     SHA256SUMS and latest.json, the in-app update checker's feed.
 # Then it tags the release v<version> and creates a GitHub Release with all of it.
@@ -101,6 +103,12 @@ jobs:
             echo "::error::build $run: linux-appimage is '$(conclusion linux-appimage)'"
             exit 1
           }
+          # The jpsutton pacman repository (jpsutton/arch-repo) fails to publish a release
+          # without this package, so it is required.
+          [ "$(conclusion linux-arch)" = success ] || {
+            echo "::error::build $run: linux-arch is '$(conclusion linux-arch)'"
+            exit 1
+          }
           for job in macos windows android; do
             if [ "$(conclusion "$job")" = success ]; then
               echo "$job=true" >> "$GITHUB_OUTPUT"
@@ -193,6 +201,7 @@ jobs:
         run: |
           set -euo pipefail
           gh run download "${{ needs.prepare.outputs.run }}" -R "$GITHUB_REPOSITORY" -n freecell-linux -D dist
+          gh run download "${{ needs.prepare.outputs.run }}" -R "$GITHUB_REPOSITORY" -n freecell-arch -D dist
           for platform in macos windows; do
             result=MACOS; [ "$platform" = windows ] && result=WINDOWS
             if [ "${!result}" = success ]; then
@@ -269,3 +278,17 @@ jobs:
           # Ubuntu's fdroidserver (2.2) can't read current APKs.
           pipx install fdroidserver==2.4.5
           scripts/ci/fdroid-repo.sh "$apk"
+
+      # jpsutton/arch-repo checks for new releases hourly; this makes it publish now.
+      # Best effort: needs a token that can write to that repository.
+      - name: Update the pacman repository
+        if: needs.prepare.outputs.dry_run == 'false'
+        env:
+          ARCH_REPO_DISPATCH_TOKEN: ${{ secrets.ARCH_REPO_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "$ARCH_REPO_DISPATCH_TOKEN" ]; then
+            echo "::notice::ARCH_REPO_DISPATCH_TOKEN is not set; jpsutton/arch-repo picks up the release within the hour"
+            exit 0
+          fi
+          GH_TOKEN=$ARCH_REPO_DISPATCH_TOKEN gh api repos/jpsutton/arch-repo/dispatches -f event_type=package-released \
+            || echo "::warning::could not notify jpsutton/arch-repo; it picks up the release within the hour"
