@@ -280,7 +280,7 @@ jobs:
           scripts/ci/fdroid-repo.sh "$apk"
 
       # jpsutton/arch-repo checks for new releases hourly; this makes it publish now.
-      # Best effort: needs a token that can write to that repository.
+      # Best effort: needs a fine-grained token with Actions: write on that repository.
       - name: Update the pacman repository
         if: needs.prepare.outputs.dry_run == 'false'
         env:
@@ -290,5 +290,5 @@ jobs:
             echo "::notice::ARCH_REPO_DISPATCH_TOKEN is not set; jpsutton/arch-repo picks up the release within the hour"
             exit 0
           fi
-          GH_TOKEN=$ARCH_REPO_DISPATCH_TOKEN gh api repos/jpsutton/arch-repo/dispatches -f event_type=package-released \
+          GH_TOKEN=$ARCH_REPO_DISPATCH_TOKEN gh workflow run publish.yml -R jpsutton/arch-repo \
             || echo "::warning::could not notify jpsutton/arch-repo; it picks up the release within the hour"
