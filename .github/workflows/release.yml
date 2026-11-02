@@ -279,16 +279,16 @@ jobs:
           pipx install fdroidserver==2.4.5
           scripts/ci/fdroid-repo.sh "$apk"
 
-      # jpsutton/arch-repo checks for new releases hourly; this makes it publish now.
-      # Best effort: needs a fine-grained token with Actions: write on that repository.
+      # Start jpsutton/arch-repo's publish workflow so the pacman repository updates.
+      # Needs a fine-grained token with Actions: write on that repository.
       - name: Update the pacman repository
         if: needs.prepare.outputs.dry_run == 'false'
         env:
           ARCH_REPO_DISPATCH_TOKEN: ${{ secrets.ARCH_REPO_DISPATCH_TOKEN }}
         run: |
           if [ -z "$ARCH_REPO_DISPATCH_TOKEN" ]; then
-            echo "::notice::ARCH_REPO_DISPATCH_TOKEN is not set; jpsutton/arch-repo picks up the release within the hour"
+            echo "::warning::ARCH_REPO_DISPATCH_TOKEN is not set; jpsutton/arch-repo was not updated"
             exit 0
           fi
           GH_TOKEN=$ARCH_REPO_DISPATCH_TOKEN gh workflow run publish.yml -R jpsutton/arch-repo \
-            || echo "::warning::could not notify jpsutton/arch-repo; it picks up the release within the hour"
+            || echo "::warning::could not notify jpsutton/arch-repo; the pacman repository was not updated"
